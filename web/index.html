@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Radar IoT · uRAD Smart Radar Sensor en la plataforma AGlabs</title>
+<meta name="description" content="Planteamiento de integración del sensor radar uRAD Smart Radar Sensor (60 GHz FMCW) en la plataforma IoT de AGlabs vía bridge RS-485 → MQTT."/>
+<link rel="icon" type="image/svg+xml" href="/radar_iot/favicon.svg"/>
+<link rel="stylesheet" href="https://aglabs.es/static/portal/aglabs.css"/>
+<style>
+  body{
+    margin:0;
+    background:var(--bg-primary);
+    color:var(--ink-primary);
+    font:var(--text-base)/1.65 var(--font-sans);
+    -webkit-font-smoothing:antialiased;
+  }
+  .return{
+    position:fixed;top:18px;right:22px;z-index:10;
+    font:500 var(--text-sm)/1 var(--font-sans);
+    color:var(--ink-secondary);
+    text-decoration:none;
+    padding:8px 12px;border-radius:var(--radius-pill);
+    background:var(--bg-elevated);box-shadow:var(--shadow-sm);
+    transition:color var(--dur) var(--ease);
+  }
+  .return:hover{color:var(--lake)}
+  .shell{max-width:1080px;margin:0 auto;padding:64px 28px 96px}
+  header.cover{padding:24px 0 56px;border-bottom:1px solid var(--line)}
+  .eyebrow{
+    display:inline-block;font:500 var(--text-xs)/1 var(--font-sans);
+    letter-spacing:.18em;text-transform:uppercase;color:var(--birch-dark);
+    margin-bottom:14px;
+  }
+  h1{
+    font:500 var(--text-4xl)/1.05 var(--font-serif);
+    letter-spacing:-.02em;margin:0 0 16px;color:var(--ink-primary);
+  }
+  .lede{
+    font:400 var(--text-lg)/1.55 var(--font-serif);
+    color:var(--ink-secondary);max-width:62ch;margin:0;
+  }
+  .meta{
+    display:flex;flex-wrap:wrap;gap:24px 36px;margin-top:32px;
+    font:400 var(--text-sm)/1.4 var(--font-sans);color:var(--ink-secondary);
+  }
+  .meta b{display:block;font:500 var(--text-xs)/1.4 var(--font-sans);letter-spacing:.1em;text-transform:uppercase;color:var(--birch-dark);margin-bottom:4px}
+  section{padding:56px 0;border-bottom:1px solid var(--line)}
+  section:last-of-type{border-bottom:0}
+  h2{
+    font:500 var(--text-2xl)/1.15 var(--font-serif);
+    letter-spacing:-.015em;margin:0 0 12px;color:var(--ink-primary);
+  }
+  h2 .num{color:var(--birch-dark);font-variant-numeric:tabular-nums;margin-right:14px}
+  h3{font:500 var(--text-lg)/1.3 var(--font-serif);margin:24px 0 10px;color:var(--ink-primary)}
+  .blurb{font:400 var(--text-base)/1.7 var(--font-sans);color:var(--ink-secondary);max-width:64ch;margin:0 0 32px}
+  ul.points{margin:0 0 32px;padding:0;list-style:none;max-width:64ch}
+  ul.points li{
+    position:relative;padding:0 0 0 22px;margin:0 0 10px;
+    font:400 var(--text-base)/1.6 var(--font-sans);color:var(--ink-primary);
+  }
+  ul.points li::before{
+    content:"";position:absolute;left:0;top:.7em;
+    width:8px;height:8px;border-radius:50%;background:var(--lake);
+  }
+  ul.points li b{color:var(--ink-primary);font-weight:600}
+  figure{margin:0 0 24px}
+  figcaption{font:400 var(--text-sm)/1.5 var(--font-sans);color:var(--ink-secondary);margin-top:10px;text-align:center}
+  .frame{
+    background:var(--bg-elevated);border:1px solid var(--line);border-radius:var(--radius-card);
+    padding:28px;overflow-x:auto;box-shadow:var(--shadow-sm);
+  }
+  .frame svg{display:block;width:100%;height:auto}
+  table.spec{
+    width:100%;border-collapse:collapse;margin:0 0 18px;
+    font:400 var(--text-sm)/1.5 var(--font-sans);
+  }
+  table.spec th, table.spec td{
+    padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);
+    vertical-align:top;
+  }
+  table.spec th{
+    background:var(--bg-secondary);font:500 var(--text-xs)/1.3 var(--font-sans);
+    letter-spacing:.08em;text-transform:uppercase;color:var(--birch-dark);
+  }
+  table.spec td.num{text-align:right;font-variant-numeric:tabular-nums}
+  table.spec tr.subtotal td{font-weight:600;background:var(--bg-secondary)}
+  table.spec tr.total td{font-weight:600;background:var(--birch);color:var(--ink-primary)}
+  .tag{
+    display:inline-block;padding:3px 10px;border-radius:var(--radius-pill);
+    background:var(--bg-secondary);color:var(--ink-secondary);
+    font:500 var(--text-xs)/1.4 var(--font-sans);letter-spacing:.04em;
+    margin:0 6px 6px 0;
+  }
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  @media (max-width:760px){.grid2{grid-template-columns:1fr}}
+  .usecase{
+    background:var(--bg-elevated);border:1px solid var(--line);border-radius:var(--radius-card);
+    padding:22px 24px;box-shadow:var(--shadow-sm);
+  }
+  .usecase h4{
+    font:500 var(--text-base)/1.3 var(--font-serif);
+    margin:0 0 8px;color:var(--ink-primary);
+  }
+  .usecase p{
+    font:400 var(--text-sm)/1.55 var(--font-sans);
+    color:var(--ink-secondary);margin:0 0 8px;
+  }
+  .usecase .tag{margin-top:8px;background:var(--bg-secondary)}
+  .note{
+    font:400 var(--text-sm)/1.6 var(--font-sans);color:var(--ink-secondary);
+    background:var(--bg-secondary);border-left:3px solid var(--moss);
+    padding:14px 18px;border-radius:8px;margin:18px 0 0;
+  }
+  footer{
+    padding:48px 0 0;text-align:center;
+    font:400 var(--text-xs)/1.6 var(--font-sans);color:var(--ink-secondary);
+  }
+  /* SVG defaults */
+  .diag-text{font:500 13px/1 var(--font-sans);fill:var(--ink-primary)}
+  .diag-text-sm{font:400 11px/1 var(--font-sans);fill:var(--ink-secondary)}
+  .diag-eyebrow{font:600 10px/1 var(--font-sans);letter-spacing:.14em;text-transform:uppercase;fill:var(--birch-dark)}
+  .diag-box{fill:var(--bg-elevated);stroke:var(--line-strong);stroke-width:1}
+  .diag-box-accent{fill:var(--bg-secondary);stroke:var(--birch-dark);stroke-width:1}
+  .diag-arrow{stroke:var(--lake);stroke-width:1.6;fill:none}
+  .diag-arrow-soft{stroke:var(--ink-secondary);stroke-width:1.2;fill:none;stroke-dasharray:4 4}
+</style>
+</head>
+<body>
+
+<a class="return" href="https://aglabs.es/">← [ag]</a>
+
+<div class="shell">
+
+  <header class="cover">
+    <span class="eyebrow">Proyecto · Planteamiento de integración</span>
+    <h1>Radar IoT</h1>
+    <p class="lede">Integración del sensor radar <b>uRAD Smart Radar Sensor</b> (60 GHz FMCW, fabricado por Anteral) en la plataforma IoT de AGlabs: del sensor en columna al dashboard de Boreas, pasando por un bridge RS-485 → MQTT sobre la stack ya existente.</p>
+    <div class="meta">
+      <div><b>Sensor</b>uRAD · 60 GHz FMCW · IP66</div>
+      <div><b>Alcance</b>≤ 100 m · hasta 180 km/h</div>
+      <div><b>Aplicaciones</b>Velocidad · bicis · peatones</div>
+      <div><b>Backhaul</b>RS-485 → bridge → MQTT/TLS</div>
+    </div>
+  </header>
+
+  <!-- 01 — Arquitectura general -->
+  <section id="arquitectura">
+    <h2><span class="num">01</span>Arquitectura general</h2>
+    <p class="blurb">El sensor uRAD habla por RS-485 y dispone de 2 GPIOs optoacoplados para señalización local (semáforos, paneles luminosos). Se propone un nodo bridge en la cabecera del sensor que convierta RS-485 a MQTT/TLS contra el broker AGlabs (<a href="https://mqtt.aglabs.es" style="color:var(--lake)">mqtt.aglabs.es</a>), donde el resto de la plataforma ya está enganchada.</p>
+
+    <figure>
+      <div class="frame">
+        <svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Arquitectura general de integración del radar uRAD en AGlabs">
+          <!-- Nivel 1 — sensor -->
+          <text x="20" y="28" class="diag-eyebrow">Nivel 1 · Sensor radar en campo</text>
+          <rect x="20" y="50" width="320" height="160" rx="14" class="diag-box"/>
+          <text x="36" y="76" class="diag-text">uRAD Smart Radar Sensor</text>
+          <text x="36" y="100" class="diag-text-sm">60 GHz FMCW · 15 dBm · FoV 160°</text>
+          <text x="36" y="118" class="diag-text-sm">Alcance ≤ 100 m · velocidad ≤ 180 km/h</text>
+          <text x="36" y="136" class="diag-text-sm">Caja policarbonato IP66 · -20 a +80 °C</text>
+          <text x="36" y="158" class="diag-text-sm">Salidas: RS-485 · UART · 2× GPIO opto</text>
+          <text x="36" y="176" class="diag-text-sm">Alim. 8–42 V DC · 0,5–2,5 W</text>
+          <text x="36" y="198" class="diag-text-sm">Instalación en columna · WiFi solo para configurar</text>
+
+          <!-- Bridge node -->
+          <rect x="360" y="50" width="280" height="160" rx="14" class="diag-box-accent"/>
+          <text x="376" y="76" class="diag-text">Nodo bridge (cabecera del sensor)</text>
+          <text x="376" y="100" class="diag-text-sm">ESP32 industrial DIN + transceiver RS-485</text>
+          <text x="376" y="118" class="diag-text-sm">o Teltonika RUT241 con conversor RS-485↔IP</text>
+          <text x="376" y="138" class="diag-text-sm">Cliente MQTT/TLS · QoS 1 · LWT</text>
+          <text x="376" y="156" class="diag-text-sm">Backhaul: Ethernet · WiFi · 4G LTE</text>
+          <text x="376" y="178" class="diag-text-sm">Buffer local ante caída de red</text>
+          <text x="376" y="198" class="diag-text-sm" style="fill:var(--clay)">Único punto con salida a internet</text>
+
+          <!-- Banda lateral -->
+          <rect x="660" y="50" width="320" height="160" rx="14" class="diag-box"/>
+          <text x="676" y="76" class="diag-text">Topics MQTT propuestos</text>
+          <text x="676" y="100" class="diag-text-sm">aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/track</text>
+          <text x="676" y="118" class="diag-text-sm">aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/event</text>
+          <text x="676" y="136" class="diag-text-sm">aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/state</text>
+          <text x="676" y="158" class="diag-text-sm">aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/$health</text>
+          <text x="676" y="180" class="diag-text-sm">Payload JSON · timestamp ISO 8601 · id_objeto</text>
+          <text x="676" y="198" class="diag-text-sm">Cifrado por TLS · ACL por client_id</text>
+
+          <!-- Arrows: sensor → bridge -->
+          <path class="diag-arrow" d="M340,130 L360,130" marker-end="url(#arrow)"/>
+          <text x="328" y="120" class="diag-text-sm">RS-485</text>
+
+          <!-- Arrows: bridge → topics (concepto) -->
+          <path class="diag-arrow-soft" d="M640,130 L660,130"/>
+
+          <!-- Nivel 2 — broker -->
+          <text x="20" y="252" class="diag-eyebrow">Nivel 2 · Broker MQTT AGlabs (mqtt.aglabs.es)</text>
+          <rect x="20" y="270" width="960" height="80" rx="14" class="diag-box-accent"/>
+          <text x="36" y="296" class="diag-text">Mosquitto · TLS · ACL por dispositivo</text>
+          <text x="36" y="318" class="diag-text-sm">Reusa la infraestructura del proyecto aglabs_mqtt — broker ya operativo,
+              persistencia retain, dashboard de inspección en mqtt.aglabs.es.</text>
+          <text x="36" y="338" class="diag-text-sm">Sin Django ni base de datos adicional en este nivel.</text>
+
+          <!-- Arrow bridge → broker -->
+          <path class="diag-arrow" d="M500,210 L500,270" marker-end="url(#arrow)"/>
+          <text x="510" y="246" class="diag-text-sm">MQTT/TLS</text>
+
+          <!-- Nivel 3 — Boreas -->
+          <text x="20" y="382" class="diag-eyebrow">Nivel 3 · Ingesta y visualización en Boreas</text>
+          <rect x="20" y="400" width="460" height="80" rx="14" class="diag-box"/>
+          <text x="36" y="426" class="diag-text">Bridge Telegraf MQTT → TimescaleDB</text>
+          <text x="36" y="446" class="diag-text-sm">Nuevo plugin/parsing en nexus_telegraf (proyecto Nexus)</text>
+          <text x="36" y="466" class="diag-text-sm">Hypertable propuesta: nexus_radar (time, sensor_id, event_type, …)</text>
+
+          <rect x="500" y="400" width="480" height="80" rx="14" class="diag-box"/>
+          <text x="516" y="426" class="diag-text">Dashboards Boreas + tarjeta en portal AG</text>
+          <text x="516" y="446" class="diag-text-sm">Vista “Tráfico” en boreas.aglabs.es por concejo / cliente</text>
+          <text x="516" y="466" class="diag-text-sm">Alarmas reusando Cortex (detectores estadísticos genéricos)</text>
+
+          <!-- Arrow broker → Boreas -->
+          <path class="diag-arrow" d="M250,350 L250,400" marker-end="url(#arrow)"/>
+          <path class="diag-arrow" d="M740,350 L740,400" marker-end="url(#arrow)"/>
+          <text x="260" y="378" class="diag-text-sm">subscribe</text>
+          <text x="750" y="378" class="diag-text-sm">subscribe</text>
+
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--lake)"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+      <figcaption>Planteamiento de integración del radar uRAD en la plataforma AGlabs — 3 niveles.</figcaption>
+    </figure>
+
+    <ul class="points">
+      <li><b>Nivel 1</b> — sensor en columna con bridge propio. El radar no habla TCP/IP; el bridge es obligatorio.</li>
+      <li><b>Nivel 2</b> — broker MQTT corporativo (<code>mqtt.aglabs.es</code>) ya operativo. Cero infraestructura nueva de mensajería.</li>
+      <li><b>Nivel 3</b> — ingesta en TimescaleDB con el mismo patrón que <code>nexus_electrical</code> / <code>nexus_iaq</code>; visualización embebida en Boreas como una capa más.</li>
+      <li>El sensor es <b>independiente del backhaul</b> elegido en el bridge (Eth/WiFi/4G). La decisión se toma por emplazamiento.</li>
+    </ul>
+  </section>
+
+  <!-- 02 — El sensor -->
+  <section id="sensor">
+    <h2><span class="num">02</span>El sensor uRAD Smart Radar Sensor</h2>
+    <p class="blurb">Radar FMCW a 60 GHz fabricado por Anteral (Huarte, Navarra). Diseñado específicamente para aplicaciones de tráfico no invasivas en Smart Cities: se instala en cualquier vía sin obras y se configura por WiFi desde una app web embebida en el propio dispositivo.</p>
+
+    <h3>Parámetros de RF</h3>
+    <table class="spec">
+      <tbody>
+        <tr><td>Frecuencia</td><td>60 – 64 GHz</td></tr>
+        <tr><td>Modulación</td><td>FMCW</td></tr>
+        <tr><td>Potencia de emisión</td><td>15 dBm</td></tr>
+        <tr><td>Campo de visión</td><td>160 °</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Alimentación</h3>
+    <table class="spec">
+      <tbody>
+        <tr><td>Voltaje</td><td>8 – 42 V DC (variante 5 V DC también disponible)</td></tr>
+        <tr><td>Consumo</td><td>0,5 – 2,5 W según aplicación</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Parámetros mecánicos</h3>
+    <table class="spec">
+      <tbody>
+        <tr><td>Dimensiones PCB</td><td>85 × 76 × 20 mm · 50 g</td></tr>
+        <tr><td>Dimensiones con caja</td><td>115 × 90 × 65 mm · 560 g con anclaje</td></tr>
+        <tr><td>Protección</td><td>Caja policarbonato IP66 · NEMA 4X, 12, 13 · UL-508</td></tr>
+        <tr><td>Conexión</td><td>Prensaestopas</td></tr>
+        <tr><td>Instalación</td><td>Caja, anclaje y abrazaderas opcionales (columna cilíndrica)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Interfaces de comunicación</h3>
+    <table class="spec">
+      <tbody>
+        <tr><td>Interfaz cableada</td><td>RS-485, UART, 2× GPIO optoacoplados</td></tr>
+        <tr><td>Configuración local</td><td>WiFi (AP local, app web embebida)</td></tr>
+        <tr><td>Protocolo</td><td>Personalizado, depende de la aplicación cargada</td></tr>
+        <tr><td>Procesador central</td><td>Xtensa dual-core 32 bits · 240 MHz · 8 MB Flash</td></tr>
+        <tr><td>Temperatura de operación</td><td>-20 a +80 °C</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Rendimiento</h3>
+    <table class="spec">
+      <tbody>
+        <tr><td>Velocidad máxima</td><td>180 km/h</td></tr>
+        <tr><td>Distancia máxima</td><td>100 m</td></tr>
+        <tr><td>Distancia lateral</td><td>± 15 m</td></tr>
+        <tr><td colspan="2" style="font-style:italic;color:var(--ink-secondary)">Rendimiento real depende de la aplicación, tipo de objeto y colocación del sensor.</td></tr>
+      </tbody>
+    </table>
+
+    <p class="blurb" style="margin-top:24px">El fabricante ofrece <b>tres aplicaciones preinstalables</b> que se cargan vía WiFi en el momento del despliegue: detección de velocidad y distancia en tiempo real (multi-carril, ID único por vehículo), detección específica de bicicletas (carril configurable, GPIO de aviso) y detección de peatones en pasos de cebra (área y sensibilidad configurables, GPIO de aviso).</p>
+  </section>
+
+  <!-- 03 — Bridge -->
+  <section id="bridge">
+    <h2><span class="num">03</span>Bridge RS-485 → MQTT (el nodo de cabecera)</h2>
+    <p class="blurb">El sensor uRAD habla RS-485 con un protocolo propio del fabricante; no es un cliente MQTT nativo. El nodo bridge se coloca en la cabecera del sensor (típicamente dentro de una caja IP65 anexa a la columna) y traduce las tramas RS-485 a mensajes MQTT/TLS contra el broker AGlabs.</p>
+
+    <figure>
+      <div class="frame">
+        <svg viewBox="0 0 1000 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Detalle del bridge RS-485 → MQTT">
+          <!-- Columna -->
+          <rect x="40" y="40" width="60" height="320" rx="6" fill="var(--bg-secondary)" stroke="var(--line-strong)"/>
+          <text x="50" y="370" class="diag-text-sm">Columna</text>
+
+          <!-- Radar uRAD -->
+          <rect x="120" y="60" width="200" height="100" rx="10" class="diag-box-accent"/>
+          <text x="136" y="84" class="diag-text">uRAD Smart Radar Sensor</text>
+          <text x="136" y="106" class="diag-text-sm">60 GHz · IP66</text>
+          <text x="136" y="124" class="diag-text-sm">2× GPIO opto · RS-485 · UART</text>
+          <text x="136" y="142" class="diag-text-sm">Alim. 12 / 24 V DC</text>
+
+          <!-- Caja bridge -->
+          <rect x="120" y="200" width="380" height="150" rx="10" class="diag-box"/>
+          <text x="136" y="226" class="diag-text">Caja IP65 — nodo bridge</text>
+          <rect x="136" y="240" width="160" height="34" rx="6" class="diag-box-accent"/>
+          <text x="146" y="262" class="diag-text-sm">ESP32 industrial DIN</text>
+          <rect x="306" y="240" width="180" height="34" rx="6" class="diag-box-accent"/>
+          <text x="316" y="262" class="diag-text-sm">Transceiver RS-485 (MAX485)</text>
+          <rect x="136" y="284" width="160" height="34" rx="6" class="diag-box"/>
+          <text x="146" y="306" class="diag-text-sm">Fuente AC/DC 12 V · 30 W</text>
+          <rect x="306" y="284" width="180" height="34" rx="6" class="diag-box"/>
+          <text x="316" y="306" class="diag-text-sm">Magneto 2 A + descargador</text>
+
+          <!-- Cable sensor → bridge -->
+          <path class="diag-arrow" d="M220,160 L220,200" marker-end="url(#arrow2)"/>
+          <text x="228" y="184" class="diag-text-sm">RS-485 + alim.</text>
+
+          <!-- GPIO opto → señalización local -->
+          <path class="diag-arrow-soft" d="M320,120 L600,120"/>
+          <rect x="600" y="80" width="220" height="80" rx="10" class="diag-box"/>
+          <text x="616" y="106" class="diag-text">Señalización local (opcional)</text>
+          <text x="616" y="126" class="diag-text-sm">Panel LED · semáforo ámbar</text>
+          <text x="616" y="144" class="diag-text-sm">Activación &lt; 50 ms por GPIO</text>
+
+          <!-- Backhaul -->
+          <path class="diag-arrow" d="M500,272 L640,272" marker-end="url(#arrow2)"/>
+          <text x="510" y="262" class="diag-text-sm">Eth · WiFi · 4G</text>
+
+          <rect x="640" y="232" width="320" height="120" rx="10" class="diag-box-accent"/>
+          <text x="656" y="258" class="diag-text">Backhaul al broker</text>
+          <text x="656" y="280" class="diag-text-sm">Opción A — Ethernet directo si hay fibra municipal</text>
+          <text x="656" y="298" class="diag-text-sm">Opción B — WiFi del mobiliario urbano</text>
+          <text x="656" y="316" class="diag-text-sm">Opción C — Teltonika RUT241 4G LTE + SIM M2M</text>
+          <text x="656" y="338" class="diag-text-sm" style="fill:var(--moss)">MQTT/TLS · QoS 1 · LWT · buffer local</text>
+
+          <defs>
+            <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--lake)"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+      <figcaption>Nodo bridge en la cabecera del sensor — convierte RS-485 a MQTT/TLS y enruta GPIO opto a señalización local.</figcaption>
+    </figure>
+
+    <ul class="points">
+      <li><b>Bridge mínimo</b>: ESP32 industrial DIN + transceiver MAX485 + fuente 12 V — suficiente cuando hay Ethernet o WiFi en el punto de instalación.</li>
+      <li><b>Bridge robusto</b>: Teltonika RUT241 con módulo RS-485 (vía conversor IP) cuando se necesite 4G LTE, VPN, failover y monitorización del router por SNMP.</li>
+      <li><b>GPIO opto</b>: el sensor activa señalización local en &lt; 50 ms sin depender del broker. La salida MQTT es para registro/dashboard, no para cerrar el lazo de control.</li>
+      <li><b>Configuración del sensor</b>: por WiFi desde la app web embebida — se hace una sola vez en campo durante la instalación. No requiere infraestructura AGlabs.</li>
+    </ul>
+  </section>
+
+  <!-- 04 — Casos de uso -->
+  <section id="casos">
+    <h2><span class="num">04</span>Casos de uso en la plataforma AGlabs</h2>
+    <p class="blurb">Las cuatro líneas de uso prioritarias para el portfolio AGlabs (clientes municipales, RG, gestión de carriles bici, movilidad urbana). Cada una reusa las tres aplicaciones nativas del sensor sin desarrollo de firmware adicional.</p>
+
+    <div class="grid2">
+      <div class="usecase">
+        <h4>Pasos de peatones inteligentes</h4>
+        <p>Detección de personas que se aproximan al paso. El sensor activa por GPIO una baliza luminosa y publica el evento en MQTT con marca temporal y área de detección. Sin contacto con el firme, sin obra civil.</p>
+        <p><span class="tag">App nativa del sensor</span><span class="tag">Concejos · ayuntamientos</span></p>
+      </div>
+
+      <div class="usecase">
+        <h4>Radar pedagógico y control de velocidad</h4>
+        <p>Medida en tiempo real de velocidad y distancia de vehículos en ambos sentidos. Activación de panel luminoso reactivo por umbral configurable. Histórico en TimescaleDB para auditoría y comparación temporal.</p>
+        <p><span class="tag">Tráfico urbano · interurbano</span><span class="tag">Datos para concejos</span></p>
+      </div>
+
+      <div class="usecase">
+        <h4>Aforo y conteo de bicicletas en carril bici</h4>
+        <p>App específica del sensor para detectar bicis, con carril configurable para limitar falsos positivos. Cada bici tiene ID único durante el trayecto. Indicador de uso del carril bici para movilidad municipal.</p>
+        <p><span class="tag">Movilidad sostenible</span><span class="tag">Indicadores municipales</span></p>
+      </div>
+
+      <div class="usecase">
+        <h4>Aforo multicarril de tráfico para municipios</h4>
+        <p>Velocidad, dirección e ID por vehículo en varios carriles simultáneamente. Dashboard tipo Boreas por concejo: intensidad horaria, IMD, velocidades medias y percentiles, mapa de calor por punto de medida.</p>
+        <p><span class="tag">RG · gestor_concejo</span><span class="tag">Datos abiertos potenciales</span></p>
+      </div>
+    </div>
+
+    <div class="note">
+      Los cuatro casos comparten infraestructura: <b>mismo sensor</b>, <b>mismo bridge</b>, <b>mismo broker MQTT</b>, <b>misma hypertable</b>. La diferencia entre despliegues es la aplicación cargada en el sensor por WiFi y los <code>topic</code> / <code>tags</code> con los que el bridge publica. No hay diferenciación física por caso de uso.
+    </div>
+  </section>
+
+  <!-- 05 — BOM aproximado -->
+  <section id="bom">
+    <h2><span class="num">05</span>BOM aproximado por punto de medida</h2>
+    <p class="blurb">Listado material orientativo para un punto de medida con bridge ESP32 y backhaul WiFi/Ethernet (caso más económico). El precio del sensor uRAD no es público — Anteral comercializa bajo presupuesto, contactar a <a href="mailto:contact@urad.es" style="color:var(--lake)">contact@urad.es</a> o <a href="https://urad.es" style="color:var(--lake)">urad.es</a>.</p>
+
+    <h3>Sensor</h3>
+    <table class="spec">
+      <thead><tr><th>Uds.</th><th>Componente</th><th>Especificación</th><th class="num">PVP unit.</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>uRAD Smart Radar Sensor (versión con caja IP66 + anclaje)</td><td>60 GHz FMCW · RS-485 · GPIO opto</td><td class="num">consultar fabricante</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Nodo bridge (RS-485 → MQTT)</h3>
+    <table class="spec">
+      <thead><tr><th>Uds.</th><th>Componente</th><th>Especificación</th><th class="num">PVP unit.</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>ESP32 industrial carril DIN</td><td>Wi-Fi · Ethernet · RS-485 nativo</td><td class="num">≈ 65 €</td></tr>
+        <tr><td>1</td><td>Caja IP65 anexa a columna</td><td>Policarbonato · prensaestopas</td><td class="num">≈ 35 €</td></tr>
+        <tr><td>1</td><td>Fuente AC/DC 12 V · 30 W carril DIN</td><td>Mean Well DR-30-12 o equivalente</td><td class="num">≈ 25 €</td></tr>
+        <tr><td>1</td><td>Magnetotérmico 2 A 2P + descargador SPD</td><td>Protección de línea</td><td class="num">≈ 35 €</td></tr>
+        <tr><td>1</td><td>Cableado RS-485 apantallado 4 hilos · 5 m</td><td>Belden 9842 o equivalente</td><td class="num">≈ 20 €</td></tr>
+        <tr class="subtotal"><td colspan="3">Subtotal bridge</td><td class="num">≈ 180 €</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Backhaul (elegir uno)</h3>
+    <table class="spec">
+      <thead><tr><th>Opción</th><th>Coste material</th><th>Coste recurrente</th></tr></thead>
+      <tbody>
+        <tr><td>A · Ethernet aprovechando fibra municipal</td><td>≈ 0 € (latiguillo)</td><td>0 €/mes</td></tr>
+        <tr><td>B · WiFi del mobiliario urbano</td><td>≈ 0 €</td><td>0 €/mes</td></tr>
+        <tr><td>C · Teltonika RUT241 4G LTE + SIM M2M</td><td>≈ 190 €</td><td>5 – 15 €/mes (SIM)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <b>No incluido:</b> obra civil de columna (si no existe), instalación eléctrica, alta de SIM datos M2M (opción C), licencias o tasas municipales para uso de espectro 60 GHz (no aplica — banda ISM exenta en EU), configuración inicial del sensor por WiFi.<br/>
+      <b>Coste sensor:</b> referencia pública 2026 — el rango orientativo de soluciones radar 60 GHz con caja industrial similar se mueve entre 600 € y 1.500 € por unidad según volumen. Pendiente cierre con Anteral.
+    </div>
+  </section>
+
+  <!-- 06 — Siguientes pasos -->
+  <section id="siguientes">
+    <h2><span class="num">06</span>Siguientes pasos en AGlabs</h2>
+    <ul class="points">
+      <li><b>Adquirir 1 unidad de evaluación</b> con caja IP66 para validar las 3 aplicaciones nativas en campo (paso de peatones, carril bici, tramo de velocidad).</li>
+      <li><b>Prototipo de bridge</b> con ESP32 y MAX485 — firmware MQTT mínimo publicando <code>aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/track</code>. Reusar la base del bridge Tactica de <code>aglabs_mqtt</code>.</li>
+      <li><b>Definir el esquema</b> de la hypertable <code>nexus_radar</code> en TimescaleDB (clave: <code>time, sensor_id, event_type</code>; partición diaria) y crear el parser en <code>nexus_telegraf</code>.</li>
+      <li><b>Primera vista</b> en Boreas (sección Tráfico) reusando los componentes de <code>nexus_*</code>: gráficas de serie temporal, histogramas, mapa por punto.</li>
+      <li><b>Primer cliente piloto</b>: concejo o ayuntamiento con interés en aforo de carril bici o paso de peatones inteligente — perfil <code>gestor_concejo</code> en AG.</li>
+    </ul>
+  </section>
+
+  <footer>
+    AGlabs · Radar IoT · planteamiento de integración del sensor uRAD Smart Radar Sensor · documento técnico interno · mayo 2026
+  </footer>
+
+</div>
+</body>
+</html>
