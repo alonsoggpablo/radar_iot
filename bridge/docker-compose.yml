@@ -1,0 +1,18 @@
+services:
+  radar_iot_bridge:
+    build: .
+    image: aglabs/radar_iot_bridge:0.1.0
+    container_name: radar_iot_bridge
+    restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
+    env_file: .env
+    environment:
+      RADAR_RESULTS_PATH: /results/Vehicle_results.txt
+      RADAR_LOCAL_DB: /var/lib/radar_iot/events.sqlite
+    volumes:
+      - /home/pi/Desktop/uRAD_Tracking_v2_x/Results:/results:ro
+      - radar_iot_data:/var/lib/radar_iot
+
+volumes:
+  radar_iot_data:

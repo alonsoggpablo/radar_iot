@@ -1,0 +1,6 @@
+.env
+*.sqlite
+*.sqlite-journal
+__pycache__/
+*.pyc
+.git/

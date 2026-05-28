@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Radar IoT · uRAD Smart Radar Sensor en la plataforma AGlabs</title>
-<meta name="description" content="Planteamiento de integración del sensor radar uRAD Smart Radar Sensor (60 GHz FMCW) en la plataforma IoT de AGlabs vía bridge RS-485 → MQTT."/>
+<title>Radar IoT · uRAD Smart Traffic RPi en la plataforma AGlabs</title>
+<meta name="description" content="Planteamiento de integración del sensor radar uRAD Smart Traffic RPi (60 GHz FMCW + Raspberry Pi embebida) en la plataforma IoT de AGlabs vía cliente MQTT sobre WiFi/4G."/>
 <link rel="icon" type="image/svg+xml" href="/radar_iot/favicon.svg"/>
 <link rel="stylesheet" href="https://aglabs.es/static/portal/aglabs.css"/>
 <style>
@@ -112,6 +112,14 @@
     background:var(--bg-secondary);border-left:3px solid var(--moss);
     padding:14px 18px;border-radius:8px;margin:18px 0 0;
   }
+  pre.code{
+    background:var(--bg-elevated);border:1px solid var(--line);border-radius:8px;
+    padding:14px 18px;margin:12px 0 24px;overflow-x:auto;
+    font:400 var(--text-sm)/1.5 var(--font-mono);color:var(--ink-primary);
+  }
+  pre.code .c{color:var(--ink-secondary)}
+  pre.code .k{color:var(--moss)}
+  pre.code .s{color:var(--clay)}
   footer{
     padding:48px 0 0;text-align:center;
     font:400 var(--text-xs)/1.6 var(--font-sans);color:var(--ink-secondary);
@@ -135,60 +143,50 @@
   <header class="cover">
     <span class="eyebrow">Proyecto · Planteamiento de integración</span>
     <h1>Radar IoT</h1>
-    <p class="lede">Integración del sensor radar <b>uRAD Smart Radar Sensor</b> (60 GHz FMCW, fabricado por Anteral) en la plataforma IoT de AGlabs: del sensor en columna al dashboard de Boreas, pasando por un bridge RS-485 → MQTT sobre la stack ya existente.</p>
+    <p class="lede">Integración del sensor <b>uRAD Smart Traffic RPi</b> (radar 60 GHz FMCW con Raspberry Pi embebida, fabricado por Anteral) en la plataforma IoT de AGlabs: del dispositivo en columna al dashboard de Boreas, con cliente MQTT corriendo directamente en la RPi del propio sensor.</p>
     <div class="meta">
-      <div><b>Sensor</b>uRAD · 60 GHz FMCW · IP66</div>
-      <div><b>Alcance</b>≤ 100 m · hasta 180 km/h</div>
-      <div><b>Aplicaciones</b>Velocidad · bicis · peatones</div>
-      <div><b>Backhaul</b>RS-485 → bridge → MQTT/TLS</div>
+      <div><b>Dispositivo</b>uRAD Smart Traffic RPi · 60 GHz FMCW · IP66</div>
+      <div><b>Alcance</b>30 m (conteo) · 100 m (otras apps) · ≤ 180 km/h</div>
+      <div><b>Cómputo</b>Raspberry Pi embebida · Linux · Python</div>
+      <div><b>Backhaul</b>WiFi + 4G (dongle opcional) · MQTT/TLS</div>
     </div>
   </header>
 
   <!-- 01 — Arquitectura general -->
   <section id="arquitectura">
     <h2><span class="num">01</span>Arquitectura general</h2>
-    <p class="blurb">El sensor uRAD habla por RS-485 y dispone de 2 GPIOs optoacoplados para señalización local (semáforos, paneles luminosos). Se propone un nodo bridge en la cabecera del sensor que convierta RS-485 a MQTT/TLS contra el broker AGlabs (<a href="https://mqtt.aglabs.es" style="color:var(--lake)">mqtt.aglabs.es</a>), donde el resto de la plataforma ya está enganchada.</p>
+    <p class="blurb">El Smart Traffic RPi es una solución integrada: en una sola caja IP66 conviven el radar uRAD Industrial 60 GHz, una Raspberry Pi (Quad-core ARM, 2 GB RAM, Linux) y un dongle 4G opcional. La RPi ejecuta el software de conteo en Python y, en nuestra integración AGlabs, hará también de cliente MQTT publicando contra <a href="https://mqtt.aglabs.es" style="color:var(--lake)">mqtt.aglabs.es</a>. No hace falta bridge externo.</p>
 
     <figure>
       <div class="frame">
-        <svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Arquitectura general de integración del radar uRAD en AGlabs">
-          <!-- Nivel 1 — sensor -->
-          <text x="20" y="28" class="diag-eyebrow">Nivel 1 · Sensor radar en campo</text>
-          <rect x="20" y="50" width="320" height="160" rx="14" class="diag-box"/>
-          <text x="36" y="76" class="diag-text">uRAD Smart Radar Sensor</text>
-          <text x="36" y="100" class="diag-text-sm">60 GHz FMCW · 15 dBm · FoV 160°</text>
-          <text x="36" y="118" class="diag-text-sm">Alcance ≤ 100 m · velocidad ≤ 180 km/h</text>
-          <text x="36" y="136" class="diag-text-sm">Caja policarbonato IP66 · -20 a +80 °C</text>
-          <text x="36" y="158" class="diag-text-sm">Salidas: RS-485 · UART · 2× GPIO opto</text>
-          <text x="36" y="176" class="diag-text-sm">Alim. 8–42 V DC · 0,5–2,5 W</text>
-          <text x="36" y="198" class="diag-text-sm">Instalación en columna · WiFi solo para configurar</text>
+        <svg viewBox="0 0 1000 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Arquitectura general de integración del Smart Traffic RPi en AGlabs">
+          <!-- Nivel 1 — sensor integrado -->
+          <text x="20" y="28" class="diag-eyebrow">Nivel 1 · Dispositivo Smart Traffic RPi en columna</text>
+          <rect x="20" y="50" width="600" height="170" rx="14" class="diag-box-accent"/>
+          <text x="36" y="76" class="diag-text">uRAD Smart Traffic RPi (todo en una caja IP66, 171×121×80 mm)</text>
+          <rect x="36" y="92" width="260" height="110" rx="8" class="diag-box"/>
+          <text x="52" y="114" class="diag-text">uRAD Industrial 60 GHz</text>
+          <text x="52" y="134" class="diag-text-sm">FMCW · 15 dBm · FoV 160°</text>
+          <text x="52" y="152" class="diag-text-sm">30 m (conteo) · 100 m (otras apps)</text>
+          <text x="52" y="170" class="diag-text-sm">≤ 180 km/h · ± 15 m lateral</text>
+          <text x="52" y="188" class="diag-text-sm">Habla UART con la RPi</text>
 
-          <!-- Bridge node -->
-          <rect x="360" y="50" width="280" height="160" rx="14" class="diag-box-accent"/>
-          <text x="376" y="76" class="diag-text">Nodo bridge (cabecera del sensor)</text>
-          <text x="376" y="100" class="diag-text-sm">ESP32 industrial DIN + transceiver RS-485</text>
-          <text x="376" y="118" class="diag-text-sm">o Teltonika RUT241 con conversor RS-485↔IP</text>
-          <text x="376" y="138" class="diag-text-sm">Cliente MQTT/TLS · QoS 1 · LWT</text>
-          <text x="376" y="156" class="diag-text-sm">Backhaul: Ethernet · WiFi · 4G LTE</text>
-          <text x="376" y="178" class="diag-text-sm">Buffer local ante caída de red</text>
-          <text x="376" y="198" class="diag-text-sm" style="fill:var(--clay)">Único punto con salida a internet</text>
+          <rect x="312" y="92" width="290" height="110" rx="8" class="diag-box"/>
+          <text x="328" y="114" class="diag-text">Raspberry Pi (procesador central)</text>
+          <text x="328" y="134" class="diag-text-sm">Quad-core ARM Cortex-A72 · 1,8 GHz · 2 GB</text>
+          <text x="328" y="152" class="diag-text-sm">Raspberry Pi OS (Linux)</text>
+          <text x="328" y="170" class="diag-text-sm">Python · vehicleCounter v2.4 · servicio pm2</text>
+          <text x="328" y="188" class="diag-text-sm" style="fill:var(--moss)">+ cliente MQTT AGlabs (paho)</text>
 
-          <!-- Banda lateral -->
-          <rect x="660" y="50" width="320" height="160" rx="14" class="diag-box"/>
-          <text x="676" y="76" class="diag-text">Topics MQTT propuestos</text>
-          <text x="676" y="100" class="diag-text-sm">aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/track</text>
-          <text x="676" y="118" class="diag-text-sm">aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/event</text>
-          <text x="676" y="136" class="diag-text-sm">aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/state</text>
-          <text x="676" y="158" class="diag-text-sm">aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/$health</text>
-          <text x="676" y="180" class="diag-text-sm">Payload JSON · timestamp ISO 8601 · id_objeto</text>
-          <text x="676" y="198" class="diag-text-sm">Cifrado por TLS · ACL por client_id</text>
-
-          <!-- Arrows: sensor → bridge -->
-          <path class="diag-arrow" d="M340,130 L360,130" marker-end="url(#arrow)"/>
-          <text x="328" y="120" class="diag-text-sm">RS-485</text>
-
-          <!-- Arrows: bridge → topics (concepto) -->
-          <path class="diag-arrow-soft" d="M640,130 L660,130"/>
+          <!-- Banda lateral conectividad -->
+          <rect x="640" y="50" width="340" height="170" rx="14" class="diag-box"/>
+          <text x="656" y="76" class="diag-text">Conectividad</text>
+          <text x="656" y="100" class="diag-text-sm">WiFi (Raspberry Pi · stock)</text>
+          <text x="656" y="118" class="diag-text-sm">4G LTE (dongle Huawei opcional, SIM M2M)</text>
+          <text x="656" y="140" class="diag-text-sm">Provisión inicial: AP móvil uRAD_SN****</text>
+          <text x="656" y="158" class="diag-text-sm">Acceso operativo: SSH / VNC (pi / Anteral)</text>
+          <text x="656" y="180" class="diag-text-sm">Alimentación: 8–40 V DC · prensaestopas</text>
+          <text x="656" y="198" class="diag-text-sm">Consumo: 4,5 W</text>
 
           <!-- Nivel 2 — broker -->
           <text x="20" y="252" class="diag-eyebrow">Nivel 2 · Broker MQTT AGlabs (mqtt.aglabs.es)</text>
@@ -198,21 +196,19 @@
               persistencia retain, dashboard de inspección en mqtt.aglabs.es.</text>
           <text x="36" y="338" class="diag-text-sm">Sin Django ni base de datos adicional en este nivel.</text>
 
-          <!-- Arrow bridge → broker -->
-          <path class="diag-arrow" d="M500,210 L500,270" marker-end="url(#arrow)"/>
-          <text x="510" y="246" class="diag-text-sm">MQTT/TLS</text>
+          <!-- Arrow sensor → broker -->
+          <path class="diag-arrow" d="M500,220 L500,270" marker-end="url(#arrow)"/>
+          <text x="510" y="246" class="diag-text-sm">MQTT/TLS · QoS 1 · LWT</text>
 
           <!-- Nivel 3 — Boreas -->
           <text x="20" y="382" class="diag-eyebrow">Nivel 3 · Ingesta y visualización en Boreas</text>
-          <rect x="20" y="400" width="460" height="80" rx="14" class="diag-box"/>
+          <rect x="20" y="400" width="460" height="60" rx="14" class="diag-box"/>
           <text x="36" y="426" class="diag-text">Bridge Telegraf MQTT → TimescaleDB</text>
-          <text x="36" y="446" class="diag-text-sm">Nuevo plugin/parsing en nexus_telegraf (proyecto Nexus)</text>
-          <text x="36" y="466" class="diag-text-sm">Hypertable propuesta: nexus_radar (time, sensor_id, event_type, …)</text>
+          <text x="36" y="446" class="diag-text-sm">Nuevo parser en nexus_telegraf · hypertable nexus_radar</text>
 
-          <rect x="500" y="400" width="480" height="80" rx="14" class="diag-box"/>
+          <rect x="500" y="400" width="480" height="60" rx="14" class="diag-box"/>
           <text x="516" y="426" class="diag-text">Dashboards Boreas + tarjeta en portal AG</text>
-          <text x="516" y="446" class="diag-text-sm">Vista “Tráfico” en boreas.aglabs.es por concejo / cliente</text>
-          <text x="516" y="466" class="diag-text-sm">Alarmas reusando Cortex (detectores estadísticos genéricos)</text>
+          <text x="516" y="446" class="diag-text-sm">Vista "Tráfico" en boreas.aglabs.es · alarmas Cortex</text>
 
           <!-- Arrow broker → Boreas -->
           <path class="diag-arrow" d="M250,350 L250,400" marker-end="url(#arrow)"/>
@@ -227,21 +223,21 @@
           </defs>
         </svg>
       </div>
-      <figcaption>Planteamiento de integración del radar uRAD en la plataforma AGlabs — 3 niveles.</figcaption>
+      <figcaption>Integración del Smart Traffic RPi en AGlabs — 3 niveles, sin bridge externo.</figcaption>
     </figure>
 
     <ul class="points">
-      <li><b>Nivel 1</b> — sensor en columna con bridge propio. El radar no habla TCP/IP; el bridge es obligatorio.</li>
+      <li><b>Nivel 1</b> — un único dispositivo en columna. La Raspberry Pi embebida es el "bridge": consume el flujo UART del radar y publica MQTT contra el broker. No hay caja anexa, ni ESP32, ni transceiver RS-485.</li>
       <li><b>Nivel 2</b> — broker MQTT corporativo (<code>mqtt.aglabs.es</code>) ya operativo. Cero infraestructura nueva de mensajería.</li>
       <li><b>Nivel 3</b> — ingesta en TimescaleDB con el mismo patrón que <code>nexus_electrical</code> / <code>nexus_iaq</code>; visualización embebida en Boreas como una capa más.</li>
-      <li>El sensor es <b>independiente del backhaul</b> elegido en el bridge (Eth/WiFi/4G). La decisión se toma por emplazamiento.</li>
+      <li>El backhaul es <b>WiFi o 4G</b>, decidido por emplazamiento. Si hay WiFi del mobiliario urbano disponible, basta; si no, el dongle 4G interno mantiene la conectividad.</li>
     </ul>
   </section>
 
-  <!-- 02 — El sensor -->
-  <section id="sensor">
-    <h2><span class="num">02</span>El sensor uRAD Smart Radar Sensor</h2>
-    <p class="blurb">Radar FMCW a 60 GHz fabricado por Anteral (Huarte, Navarra). Diseñado específicamente para aplicaciones de tráfico no invasivas en Smart Cities: se instala en cualquier vía sin obras y se configura por WiFi desde una app web embebida en el propio dispositivo.</p>
+  <!-- 02 — El dispositivo -->
+  <section id="dispositivo">
+    <h2><span class="num">02</span>El dispositivo Smart Traffic RPi</h2>
+    <p class="blurb">Solución específica de Smart Cities para monitorización no invasiva de tráfico, fabricada por Anteral (Huarte, Navarra). Integra el módulo radar uRAD Industrial 60 GHz con una Raspberry Pi y el firmware de conteo en Python. Hardware v2.0, firmware Vehicle Monitoring v2.4 (manual fechado 28/10/2025).</p>
 
     <h3>Parámetros de RF</h3>
     <table class="spec">
@@ -256,30 +252,31 @@
     <h3>Alimentación</h3>
     <table class="spec">
       <tbody>
-        <tr><td>Voltaje</td><td>8 – 42 V DC (variante 5 V DC también disponible)</td></tr>
-        <tr><td>Consumo</td><td>0,5 – 2,5 W según aplicación</td></tr>
+        <tr><td>Voltaje</td><td>8 – 40 V DC (o 5 V DC directo a la RPi)</td></tr>
+        <tr><td>Conector</td><td>Prensaestopas · cable VCC+GND (rojo/negro internos · azul/marrón si trae cable externo)</td></tr>
+        <tr><td>Consumo</td><td>4,5 W</td></tr>
       </tbody>
     </table>
 
     <h3>Parámetros mecánicos</h3>
     <table class="spec">
       <tbody>
-        <tr><td>Dimensiones PCB</td><td>85 × 76 × 20 mm · 50 g</td></tr>
-        <tr><td>Dimensiones con caja</td><td>115 × 90 × 65 mm · 560 g con anclaje</td></tr>
-        <tr><td>Protección</td><td>Caja policarbonato IP66 · NEMA 4X, 12, 13 · UL-508</td></tr>
-        <tr><td>Conexión</td><td>Prensaestopas</td></tr>
-        <tr><td>Instalación</td><td>Caja, anclaje y abrazaderas opcionales (columna cilíndrica)</td></tr>
+        <tr><td>Dimensiones y peso</td><td>171 × 121 × 80 mm · 1,1 kg</td></tr>
+        <tr><td>Material</td><td>Policarbonato</td></tr>
+        <tr><td>Protección</td><td>IP66 · NEMA 4X, 12, 13 · UL-508 · UL94 HB</td></tr>
+        <tr><td>Instalación</td><td>Anclaje y abrazaderas incluidos · sistema de ajuste vertical · columnas cilíndricas</td></tr>
       </tbody>
     </table>
 
-    <h3>Interfaces de comunicación</h3>
+    <h3>Cómputo y comunicación</h3>
     <table class="spec">
       <tbody>
-        <tr><td>Interfaz cableada</td><td>RS-485, UART, 2× GPIO optoacoplados</td></tr>
-        <tr><td>Configuración local</td><td>WiFi (AP local, app web embebida)</td></tr>
-        <tr><td>Protocolo</td><td>Personalizado, depende de la aplicación cargada</td></tr>
-        <tr><td>Procesador central</td><td>Xtensa dual-core 32 bits · 240 MHz · 8 MB Flash</td></tr>
-        <tr><td>Temperatura de operación</td><td>-20 a +80 °C</td></tr>
+        <tr><td>Procesador central</td><td>Quad-core 64-bit ARM Cortex-A72 · 1,8 GHz · 2 GB SDRAM (Raspberry Pi)</td></tr>
+        <tr><td>Sistema operativo</td><td>Linux (Raspberry Pi OS)</td></tr>
+        <tr><td>Conectividad</td><td>WiFi · 4G LTE (dongle Huawei opcional con SIM)</td></tr>
+        <tr><td>Comunicación radar↔RPi</td><td>UART interno (no USB)</td></tr>
+        <tr><td>Acceso</td><td>SSH y VNC · usuario <code>pi</code> · clave <code>Anteral</code></td></tr>
+        <tr><td>Temperatura de operación</td><td>-20 a +80 °C (recomendado -20 a +65 °C)</td></tr>
       </tbody>
     </table>
 
@@ -287,145 +284,192 @@
     <table class="spec">
       <tbody>
         <tr><td>Velocidad máxima</td><td>180 km/h</td></tr>
-        <tr><td>Distancia máxima</td><td>100 m</td></tr>
-        <tr><td>Distancia lateral</td><td>± 15 m</td></tr>
-        <tr><td colspan="2" style="font-style:italic;color:var(--ink-secondary)">Rendimiento real depende de la aplicación, tipo de objeto y colocación del sensor.</td></tr>
+        <tr><td>Distancia máxima</td><td>30 m (modo conteo) · 100 m (otras aplicaciones)</td></tr>
+        <tr><td>Distancia lateral</td><td>± 15 m (precisión óptima hasta ± 8 m)</td></tr>
+        <tr><td>Carriles simultáneos</td><td>Hasta 4 con un radar (6 con precisión degradada en extremos) · hasta 3 en un sentido</td></tr>
+        <tr><td>Efectividad declarada</td><td>&gt; 95 %</td></tr>
       </tbody>
     </table>
 
-    <p class="blurb" style="margin-top:24px">El fabricante ofrece <b>tres aplicaciones preinstalables</b> que se cargan vía WiFi en el momento del despliegue: detección de velocidad y distancia en tiempo real (multi-carril, ID único por vehículo), detección específica de bicicletas (carril configurable, GPIO de aviso) y detección de peatones en pasos de cebra (área y sensibilidad configurables, GPIO de aviso).</p>
-  </section>
-
-  <!-- 03 — Bridge -->
-  <section id="bridge">
-    <h2><span class="num">03</span>Bridge RS-485 → MQTT (el nodo de cabecera)</h2>
-    <p class="blurb">El sensor uRAD habla RS-485 con un protocolo propio del fabricante; no es un cliente MQTT nativo. El nodo bridge se coloca en la cabecera del sensor (típicamente dentro de una caja IP65 anexa a la columna) y traduce las tramas RS-485 a mensajes MQTT/TLS contra el broker AGlabs.</p>
-
-    <figure>
-      <div class="frame">
-        <svg viewBox="0 0 1000 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Detalle del bridge RS-485 → MQTT">
-          <!-- Columna -->
-          <rect x="40" y="40" width="60" height="320" rx="6" fill="var(--bg-secondary)" stroke="var(--line-strong)"/>
-          <text x="50" y="370" class="diag-text-sm">Columna</text>
-
-          <!-- Radar uRAD -->
-          <rect x="120" y="60" width="200" height="100" rx="10" class="diag-box-accent"/>
-          <text x="136" y="84" class="diag-text">uRAD Smart Radar Sensor</text>
-          <text x="136" y="106" class="diag-text-sm">60 GHz · IP66</text>
-          <text x="136" y="124" class="diag-text-sm">2× GPIO opto · RS-485 · UART</text>
-          <text x="136" y="142" class="diag-text-sm">Alim. 12 / 24 V DC</text>
-
-          <!-- Caja bridge -->
-          <rect x="120" y="200" width="380" height="150" rx="10" class="diag-box"/>
-          <text x="136" y="226" class="diag-text">Caja IP65 — nodo bridge</text>
-          <rect x="136" y="240" width="160" height="34" rx="6" class="diag-box-accent"/>
-          <text x="146" y="262" class="diag-text-sm">ESP32 industrial DIN</text>
-          <rect x="306" y="240" width="180" height="34" rx="6" class="diag-box-accent"/>
-          <text x="316" y="262" class="diag-text-sm">Transceiver RS-485 (MAX485)</text>
-          <rect x="136" y="284" width="160" height="34" rx="6" class="diag-box"/>
-          <text x="146" y="306" class="diag-text-sm">Fuente AC/DC 12 V · 30 W</text>
-          <rect x="306" y="284" width="180" height="34" rx="6" class="diag-box"/>
-          <text x="316" y="306" class="diag-text-sm">Magneto 2 A + descargador</text>
-
-          <!-- Cable sensor → bridge -->
-          <path class="diag-arrow" d="M220,160 L220,200" marker-end="url(#arrow2)"/>
-          <text x="228" y="184" class="diag-text-sm">RS-485 + alim.</text>
-
-          <!-- GPIO opto → señalización local -->
-          <path class="diag-arrow-soft" d="M320,120 L600,120"/>
-          <rect x="600" y="80" width="220" height="80" rx="10" class="diag-box"/>
-          <text x="616" y="106" class="diag-text">Señalización local (opcional)</text>
-          <text x="616" y="126" class="diag-text-sm">Panel LED · semáforo ámbar</text>
-          <text x="616" y="144" class="diag-text-sm">Activación &lt; 50 ms por GPIO</text>
-
-          <!-- Backhaul -->
-          <path class="diag-arrow" d="M500,272 L640,272" marker-end="url(#arrow2)"/>
-          <text x="510" y="262" class="diag-text-sm">Eth · WiFi · 4G</text>
-
-          <rect x="640" y="232" width="320" height="120" rx="10" class="diag-box-accent"/>
-          <text x="656" y="258" class="diag-text">Backhaul al broker</text>
-          <text x="656" y="280" class="diag-text-sm">Opción A — Ethernet directo si hay fibra municipal</text>
-          <text x="656" y="298" class="diag-text-sm">Opción B — WiFi del mobiliario urbano</text>
-          <text x="656" y="316" class="diag-text-sm">Opción C — Teltonika RUT241 4G LTE + SIM M2M</text>
-          <text x="656" y="338" class="diag-text-sm" style="fill:var(--moss)">MQTT/TLS · QoS 1 · LWT · buffer local</text>
-
-          <defs>
-            <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--lake)"/>
-            </marker>
-          </defs>
-        </svg>
-      </div>
-      <figcaption>Nodo bridge en la cabecera del sensor — convierte RS-485 a MQTT/TLS y enruta GPIO opto a señalización local.</figcaption>
-    </figure>
-
+    <h3>Capacidades del firmware</h3>
     <ul class="points">
-      <li><b>Bridge mínimo</b>: ESP32 industrial DIN + transceiver MAX485 + fuente 12 V — suficiente cuando hay Ethernet o WiFi en el punto de instalación.</li>
-      <li><b>Bridge robusto</b>: Teltonika RUT241 con módulo RS-485 (vía conversor IP) cuando se necesite 4G LTE, VPN, failover y monitorización del router por SNMP.</li>
-      <li><b>GPIO opto</b>: el sensor activa señalización local en &lt; 50 ms sin depender del broker. La salida MQTT es para registro/dashboard, no para cerrar el lazo de control.</li>
-      <li><b>Configuración del sensor</b>: por WiFi desde la app web embebida — se hace una sola vez en campo durante la instalación. No requiere infraestructura AGlabs.</li>
+      <li><b>Conteo bidireccional simultáneo</b>: velocidad positiva (alejándose) y negativa (acercándose) en la misma medida.</li>
+      <li><b>Clasificación de objetivos</b>: 1 = vehículo normal (&lt; 8 m), 2 = medio (8–15 m), 3 = largo (&gt; 15 m), 4 = bicicleta/motocicleta, 5 = peatón (&lt; 10 km/h).</li>
+      <li><b>Dos modos de operación</b>: <code>HIGHWAY_SCENARIO=True</code> (autopistas, ≥ 120 km/h, mayor velocidad / menor resolución, sin clasificar bicis ni peatones) y <code>HIGHWAY_SCENARIO=False</code> (urbano/interurbano, mejor resolución y clasificación).</li>
+      <li><b>Plataforma web del fabricante</b> opcional para visualización en tiempo real e informes descargables (alternativa a la integración AGlabs nativa).</li>
     </ul>
   </section>
 
-  <!-- 04 — Casos de uso -->
+  <!-- 03 — Software y publicación a MQTT -->
+  <section id="software">
+    <h2><span class="num">03</span>Software embebido y publicación a MQTT</h2>
+    <p class="blurb">La RPi viene con el programa principal <code>vehicleCounter_smartcities_v2_x.py</code> en <code>~/Desktop/uRAD_Tracking_v2_x/</code> y un servicio <code>pm2</code> llamado <code>radar</code> para arranque automático. La integración AGlabs consistirá en añadir un wrapper Python que tail-ee el fichero de salida (o invoque directamente la API del firmware) y publique los eventos al broker.</p>
+
+    <h3>Parámetros de configuración del firmware</h3>
+    <pre class="code"><span class="c">### MODE SELECTION ###</span>
+<span class="k">HIGHWAY_SCENARIO</span> = True   <span class="c"># False para urbano (&lt; 120 km/h)</span>
+
+<span class="c">#### COMMUNICATION INTERFACE ####</span>
+<span class="k">USB_COMMUNICATION</span> = False
+<span class="k">USE_FAN</span> = True            <span class="c"># ventilador PWM en pin 12</span>
+
+<span class="c">#### CONFIGURATION PARAMETERS ####</span>
+<span class="k">USB_CONNECTOR_UPWARD</span> = False
+<span class="k">pitch_angle</span> = 15          <span class="c"># inclinación con la vertical (grados)</span>
+<span class="k">yaw_angle</span>   = 0           <span class="c"># apuntamiento horizontal · ver §04</span>
+
+<span class="k">VELOCITY_POSITIVE</span> = True   <span class="c"># contar vehículos alejándose</span>
+<span class="k">VELOCITY_NEGATIVE</span> = True   <span class="c"># contar vehículos acercándose</span>
+
+<span class="k">X_MINIMUM_NEGATIVE_VELOCITY</span> = -7.5
+<span class="k">X_MAXIMUM_NEGATIVE_VELOCITY</span> = -0.5
+<span class="k">X_MINIMUM_POSITIVE_VELOCITY</span> =  0.5
+<span class="k">X_MAXIMUM_POSITIVE_VELOCITY</span> =  7.5
+
+<span class="c">#### OUTPUT RESULTS ####</span>
+<span class="k">SAVE_RESULTS</span> = True
+<span class="k">SAVE_RAW_DATA</span> = False     <span class="c"># nube de puntos 3D — solo debug</span>
+<span class="k">OUTPUT_DATE_TIME_FORMAT</span> = 1 <span class="c"># 0=ISO, 1=UNIX timestamp</span>
+<span class="k">FOLDERNAME</span> = <span class="s">'Results'</span>
+<span class="k">OUTPUT_FILENAME</span> = <span class="s">'Vehicle_results.txt'</span></pre>
+
+    <h3>Formato de salida — <code>Vehicle_results.txt</code></h3>
+    <p class="blurb" style="margin-bottom:14px">Cada línea = un vehículo detectado. Cuatro columnas separadas por espacio/tab:</p>
+    <table class="spec">
+      <thead><tr><th>Campo</th><th>Significado</th></tr></thead>
+      <tbody>
+        <tr><td><code>timestamp</code></td><td>Fecha/hora ISO (<code>yyyy/mm/dd HH:MM:SS</code>) o UNIX según <code>OUTPUT_DATE_TIME_FORMAT</code></td></tr>
+        <tr><td><code>velocity</code></td><td>km/h · positivo = alejándose · negativo = acercándose</td></tr>
+        <tr><td><code>x_distance</code></td><td>metros · distancia horizontal del vehículo (útil para identificar carril)</td></tr>
+        <tr><td><code>type</code></td><td>1=normal · 2=medio · 3=largo · 4=bici/moto · 5=peatón</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Servicio pm2 (autostart)</h3>
+    <pre class="code"><span class="c"># gestión del servicio "radar" ya instalado de fábrica</span>
+pm2 list                  <span class="c"># estado actual</span>
+pm2 start radar           <span class="c"># lanza vehicleCounter_smartcities_v2_x.py</span>
+pm2 stop  radar
+pm2 save                  <span class="c"># persiste estado actual</span>
+pm2 startup               <span class="c"># habilita arranque al boot · ejecutar la línea sudo env... que devuelve</span></pre>
+
+    <h3>Plan de publicación MQTT (AGlabs)</h3>
+    <p class="blurb">Topics propuestos para el broker <code>mqtt.aglabs.es</code> (idénticos al planteamiento original, agnósticos al hardware):</p>
+    <pre class="code">aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/track     <span class="c"># cada vehículo: velocidad, distancia, id, tipo</span>
+aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/event     <span class="c"># cruces de umbral, alarmas</span>
+aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/state     <span class="c"># configuración activa, app cargada</span>
+aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/$health   <span class="c"># LWT + heartbeat</span></pre>
+
+    <ul class="points">
+      <li>Payload JSON con timestamp ISO 8601 UTC, <code>velocity_kmh</code>, <code>x_m</code>, <code>type</code>, <code>id</code>, <code>sensor_id</code>, <code>site</code>.</li>
+      <li>Cliente Python con <code>paho-mqtt</code>, TLS al puerto 8883 del broker, ACL por <code>client_id</code> (ya implementado en <code>aglabs_mqtt</code>).</li>
+      <li>Wrapper como <b>servicio pm2 adicional</b> (<code>aglabs_mqtt_bridge</code>) que tail-ee <code>Vehicle_results.txt</code> y publica; convive con el servicio <code>radar</code> de fábrica sin tocarlo.</li>
+      <li>QoS 1 + buffer local (cola SQLite o equivalente) ante caída de red — la red puede caerse, el conteo no debe perderse.</li>
+    </ul>
+  </section>
+
+  <!-- 04 — Instalación y montaje -->
+  <section id="instalacion">
+    <h2><span class="num">04</span>Instalación y montaje</h2>
+    <p class="blurb">El rendimiento del sensor depende fuertemente de la geometría de instalación. Estas son las recomendaciones del manual del fabricante (versión 28/10/2025) que aplican a todo despliegue AGlabs.</p>
+
+    <h3>Altura e inclinación</h3>
+    <p class="blurb" style="margin-bottom:14px">El radar debe colocarse a una altura ≥ 3 m e inclinarse hacia el suelo según fórmula <code>tilt = atan(height / 15)</code>. Tabla de referencia:</p>
+    <table class="spec">
+      <thead><tr><th>Altura</th><th>Inclinación (pitch)</th></tr></thead>
+      <tbody>
+        <tr><td>3 m</td><td>11 °</td></tr>
+        <tr><td>4 m</td><td>15 °</td></tr>
+        <tr><td>5 m</td><td>18 °</td></tr>
+        <tr><td>6 m</td><td>22 °</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Ángulo de guiñada (yaw) según carriles</h3>
+    <table class="spec">
+      <thead><tr><th>Caso</th><th>Yaw recomendado</th></tr></thead>
+      <tbody>
+        <tr><td>1 carril a un lado del radar</td><td>0 °</td></tr>
+        <tr><td>2 carriles a un lado</td><td>15 °</td></tr>
+        <tr><td>3 carriles a un lado</td><td>30 °</td></tr>
+      </tbody>
+    </table>
+    <p class="blurb">Convención de signo: radar a la izquierda de la calzada → <b>yaw &gt; 0</b>. Radar a la derecha de la calzada → <b>yaw &lt; 0</b>. Para 6 carriles totales (3+3), se recomiendan dos radares (uno por sentido) — la precisión cae más allá de ± 8 m laterales.</p>
+
+    <h3>Otras reglas de instalación</h3>
+    <ul class="points">
+      <li><b>Conector hacia abajo</b>: el dispositivo debe montarse con el prensaestopas hacia el suelo.</li>
+      <li><b>Tramo recto</b>: instalar en una sección recta de carretera a lo largo de la distancia de detección (0–25 m). Evitar curvas.</li>
+      <li><b>Sin paradas</b>: instalar donde los vehículos no se detengan completamente — un coche parado puede generar conteos duplicados al reanudar marcha.</li>
+      <li><b>Anclaje</b>: el kit incluye soporte para columna cilíndrica con articulación central (tornillo de ajuste vertical) y abrazaderas.</li>
+      <li><b>Provisión WiFi inicial</b>: para configurar/operar en campo, crear un AP móvil con SSID <code>uRAD_SN****</code> (las cuatro cifras y la clave se entregan con el dispositivo); la RPi se asocia automáticamente y se accede por SSH o VNC.</li>
+    </ul>
+
+    <div class="note">
+      <b>Bandera ISM 60 GHz:</b> banda exenta en EU (CE bajo certificado examen de tipo EU n.º 803416897303). No requiere licencia ni tasas municipales para uso de espectro.<br/>
+      <b>Marcado:</b> RED Art. 3.1(a) seguridad (EN 62368-1, EN 62311), 3.1(b) EMC (EN 301 489-3), 3.2 espectro (EN 305 550-2), RoHS (EN 63000).
+    </div>
+  </section>
+
+  <!-- 05 — Casos de uso -->
   <section id="casos">
-    <h2><span class="num">04</span>Casos de uso en la plataforma AGlabs</h2>
-    <p class="blurb">Las cuatro líneas de uso prioritarias para el portfolio AGlabs (clientes municipales, RG, gestión de carriles bici, movilidad urbana). Cada una reusa las tres aplicaciones nativas del sensor sin desarrollo de firmware adicional.</p>
+    <h2><span class="num">05</span>Casos de uso en la plataforma AGlabs</h2>
+    <p class="blurb">Líneas de uso prioritarias para el portfolio AGlabs (clientes municipales, RG, gestión de carriles bici, movilidad urbana). El firmware del Smart Traffic RPi cubre todas con la misma configuración base — varían los parámetros <code>X_*</code>, <code>yaw_angle</code> y los filtros aguas abajo en Boreas.</p>
 
     <div class="grid2">
       <div class="usecase">
-        <h4>Pasos de peatones inteligentes</h4>
-        <p>Detección de personas que se aproximan al paso. El sensor activa por GPIO una baliza luminosa y publica el evento en MQTT con marca temporal y área de detección. Sin contacto con el firme, sin obra civil.</p>
-        <p><span class="tag">App nativa del sensor</span><span class="tag">Concejos · ayuntamientos</span></p>
-      </div>
-
-      <div class="usecase">
         <h4>Radar pedagógico y control de velocidad</h4>
-        <p>Medida en tiempo real de velocidad y distancia de vehículos en ambos sentidos. Activación de panel luminoso reactivo por umbral configurable. Histórico en TimescaleDB para auditoría y comparación temporal.</p>
+        <p>Medida en tiempo real de velocidad y distancia de vehículos en ambos sentidos. Activación de panel luminoso reactivo por umbral configurable (publicado vía MQTT). Histórico en TimescaleDB para auditoría y comparación temporal.</p>
         <p><span class="tag">Tráfico urbano · interurbano</span><span class="tag">Datos para concejos</span></p>
       </div>
 
       <div class="usecase">
-        <h4>Aforo y conteo de bicicletas en carril bici</h4>
-        <p>App específica del sensor para detectar bicis, con carril configurable para limitar falsos positivos. Cada bici tiene ID único durante el trayecto. Indicador de uso del carril bici para movilidad municipal.</p>
+        <h4>Aforo multicarril de tráfico para municipios</h4>
+        <p>Velocidad, dirección, distancia horizontal (carril) y tipo por vehículo en hasta 4 carriles simultáneos. Dashboard en Boreas por concejo: intensidad horaria, IMD, velocidades medias y percentiles, mapa de calor por punto de medida.</p>
+        <p><span class="tag">RG · gestor_concejo</span><span class="tag">Datos abiertos potenciales</span></p>
+      </div>
+
+      <div class="usecase">
+        <h4>Aforo de bicicletas en carril bici</h4>
+        <p>Modo urbano (<code>HIGHWAY_SCENARIO=False</code>) para que el clasificador distinga bicis (tipo 4) y peatones (tipo 5). Indicador de uso del carril bici para políticas municipales de movilidad sostenible.</p>
         <p><span class="tag">Movilidad sostenible</span><span class="tag">Indicadores municipales</span></p>
       </div>
 
       <div class="usecase">
-        <h4>Aforo multicarril de tráfico para municipios</h4>
-        <p>Velocidad, dirección e ID por vehículo en varios carriles simultáneamente. Dashboard tipo Boreas por concejo: intensidad horaria, IMD, velocidades medias y percentiles, mapa de calor por punto de medida.</p>
-        <p><span class="tag">RG · gestor_concejo</span><span class="tag">Datos abiertos potenciales</span></p>
+        <h4>Detección y conteo de peatones</h4>
+        <p>Objetivos con velocidad &lt; 10 km/h se clasifican automáticamente como peatones. Útil en pasos de cebra, plazas, accesos a centros municipales. Compatible con triggers de señalización lumínica (panel LED) a través de un panel auxiliar reactivo al MQTT.</p>
+        <p><span class="tag">Pasos de peatones</span><span class="tag">Accesibilidad</span></p>
       </div>
     </div>
 
     <div class="note">
-      Los cuatro casos comparten infraestructura: <b>mismo sensor</b>, <b>mismo bridge</b>, <b>mismo broker MQTT</b>, <b>misma hypertable</b>. La diferencia entre despliegues es la aplicación cargada en el sensor por WiFi y los <code>topic</code> / <code>tags</code> con los que el bridge publica. No hay diferenciación física por caso de uso.
+      Los cuatro casos comparten infraestructura: <b>mismo dispositivo</b>, <b>misma RPi</b>, <b>mismo broker MQTT</b>, <b>misma hypertable</b>. La diferencia entre despliegues es la configuración del firmware (modo highway/urbano, ángulos, ventanas X) y los filtros / paneles de Boreas. No hay diferenciación física por caso de uso.
     </div>
   </section>
 
-  <!-- 05 — BOM aproximado -->
+  <!-- 06 — BOM aproximado -->
   <section id="bom">
-    <h2><span class="num">05</span>BOM aproximado por punto de medida</h2>
-    <p class="blurb">Listado material orientativo para un punto de medida con bridge ESP32 y backhaul WiFi/Ethernet (caso más económico). El precio del sensor uRAD no es público — Anteral comercializa bajo presupuesto, contactar a <a href="mailto:contact@urad.es" style="color:var(--lake)">contact@urad.es</a> o <a href="https://urad.es" style="color:var(--lake)">urad.es</a>.</p>
+    <h2><span class="num">06</span>BOM aproximado por punto de medida</h2>
+    <p class="blurb">Listado material orientativo. El precio del Smart Traffic RPi no es público — Anteral comercializa bajo presupuesto: <a href="mailto:contact@urad.es" style="color:var(--lake)">contact@urad.es</a> · <a href="https://urad.es" style="color:var(--lake)">urad.es</a>.</p>
 
-    <h3>Sensor</h3>
+    <h3>Dispositivo</h3>
     <table class="spec">
       <thead><tr><th>Uds.</th><th>Componente</th><th>Especificación</th><th class="num">PVP unit.</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td>uRAD Smart Radar Sensor (versión con caja IP66 + anclaje)</td><td>60 GHz FMCW · RS-485 · GPIO opto</td><td class="num">consultar fabricante</td></tr>
+        <tr><td>1</td><td>uRAD Smart Traffic RPi (caja IP66 + anclaje + abrazaderas)</td><td>60 GHz FMCW · Raspberry Pi · 4,5 W</td><td class="num">consultar fabricante</td></tr>
+        <tr><td>1</td><td>Dongle 4G LTE (opcional, integrado)</td><td>Huawei · SIM M2M aparte</td><td class="num">incluido en versión 4G</td></tr>
       </tbody>
     </table>
 
-    <h3>Nodo bridge (RS-485 → MQTT)</h3>
+    <h3>Línea eléctrica y protecciones</h3>
     <table class="spec">
       <thead><tr><th>Uds.</th><th>Componente</th><th>Especificación</th><th class="num">PVP unit.</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td>ESP32 industrial carril DIN</td><td>Wi-Fi · Ethernet · RS-485 nativo</td><td class="num">≈ 65 €</td></tr>
-        <tr><td>1</td><td>Caja IP65 anexa a columna</td><td>Policarbonato · prensaestopas</td><td class="num">≈ 35 €</td></tr>
         <tr><td>1</td><td>Fuente AC/DC 12 V · 30 W carril DIN</td><td>Mean Well DR-30-12 o equivalente</td><td class="num">≈ 25 €</td></tr>
         <tr><td>1</td><td>Magnetotérmico 2 A 2P + descargador SPD</td><td>Protección de línea</td><td class="num">≈ 35 €</td></tr>
-        <tr><td>1</td><td>Cableado RS-485 apantallado 4 hilos · 5 m</td><td>Belden 9842 o equivalente</td><td class="num">≈ 20 €</td></tr>
-        <tr class="subtotal"><td colspan="3">Subtotal bridge</td><td class="num">≈ 180 €</td></tr>
+        <tr><td>1</td><td>Caja IP65 anexa para fuente y protecciones</td><td>Policarbonato · prensaestopas</td><td class="num">≈ 30 €</td></tr>
+        <tr><td>1</td><td>Cable VCC/GND apantallado al sensor · 5 m</td><td>2 hilos · sección 1,5 mm²</td><td class="num">≈ 15 €</td></tr>
+        <tr class="subtotal"><td colspan="3">Subtotal línea eléctrica</td><td class="num">≈ 105 €</td></tr>
       </tbody>
     </table>
 
@@ -433,32 +477,31 @@
     <table class="spec">
       <thead><tr><th>Opción</th><th>Coste material</th><th>Coste recurrente</th></tr></thead>
       <tbody>
-        <tr><td>A · Ethernet aprovechando fibra municipal</td><td>≈ 0 € (latiguillo)</td><td>0 €/mes</td></tr>
-        <tr><td>B · WiFi del mobiliario urbano</td><td>≈ 0 €</td><td>0 €/mes</td></tr>
-        <tr><td>C · Teltonika RUT241 4G LTE + SIM M2M</td><td>≈ 190 €</td><td>5 – 15 €/mes (SIM)</td></tr>
+        <tr><td>A · WiFi del mobiliario urbano (RPi stock)</td><td>0 €</td><td>0 €/mes</td></tr>
+        <tr><td>B · 4G LTE con dongle Huawei integrado</td><td>incluido</td><td>5 – 15 €/mes (SIM M2M)</td></tr>
       </tbody>
     </table>
 
     <div class="note">
-      <b>No incluido:</b> obra civil de columna (si no existe), instalación eléctrica, alta de SIM datos M2M (opción C), licencias o tasas municipales para uso de espectro 60 GHz (no aplica — banda ISM exenta en EU), configuración inicial del sensor por WiFi.<br/>
-      <b>Coste sensor:</b> referencia pública 2026 — el rango orientativo de soluciones radar 60 GHz con caja industrial similar se mueve entre 600 € y 1.500 € por unidad según volumen. Pendiente cierre con Anteral.
+      <b>No incluido:</b> obra civil de columna (si no existe), instalación eléctrica, alta de SIM datos M2M (opción B), licencias o tasas municipales para uso de espectro 60 GHz (no aplica — banda ISM exenta en EU), configuración inicial del firmware en campo.<br/>
+      <b>Comparativa con la variante modular:</b> el Smart Traffic RPi ahorra el bridge externo (ESP32 + transceiver RS-485 + caja anexa = ~ 180 €) a cambio de un dispositivo integrado más caro. Para volúmenes pequeños o despliegues municipales puntuales, la integración interna gana en simplicidad operativa y tiempo de instalación.
     </div>
   </section>
 
-  <!-- 06 — Siguientes pasos -->
+  <!-- 07 — Siguientes pasos -->
   <section id="siguientes">
-    <h2><span class="num">06</span>Siguientes pasos en AGlabs</h2>
+    <h2><span class="num">07</span>Siguientes pasos en AGlabs</h2>
     <ul class="points">
-      <li><b>Adquirir 1 unidad de evaluación</b> con caja IP66 para validar las 3 aplicaciones nativas en campo (paso de peatones, carril bici, tramo de velocidad).</li>
-      <li><b>Prototipo de bridge</b> con ESP32 y MAX485 — firmware MQTT mínimo publicando <code>aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/track</code>. Reusar la base del bridge Tactica de <code>aglabs_mqtt</code>.</li>
+      <li><b>Adquirir 1 unidad de evaluación</b> Smart Traffic RPi con dongle 4G para validar conteo, clasificación y publicación MQTT extremo a extremo en campo.</li>
+      <li><b>Wrapper Python AGlabs</b>: cliente <code>paho-mqtt</code> que tail-ee <code>Results/Vehicle_results.txt</code> y publique a <code>aglabs/radar/&lt;site&gt;/&lt;sensor&gt;/track</code>. Empaquetar como segundo servicio pm2 (<code>aglabs_mqtt_bridge</code>) para que conviva con el servicio <code>radar</code> de fábrica.</li>
       <li><b>Definir el esquema</b> de la hypertable <code>nexus_radar</code> en TimescaleDB (clave: <code>time, sensor_id, event_type</code>; partición diaria) y crear el parser en <code>nexus_telegraf</code>.</li>
-      <li><b>Primera vista</b> en Boreas (sección Tráfico) reusando los componentes de <code>nexus_*</code>: gráficas de serie temporal, histogramas, mapa por punto.</li>
-      <li><b>Primer cliente piloto</b>: concejo o ayuntamiento con interés en aforo de carril bici o paso de peatones inteligente — perfil <code>gestor_concejo</code> en AG.</li>
+      <li><b>Primera vista</b> en Boreas (sección Tráfico) reusando los componentes de <code>nexus_*</code>: gráficas de serie temporal, histogramas, mapa por punto, clasificación 1–5.</li>
+      <li><b>Primer cliente piloto</b>: concejo o ayuntamiento con interés en aforo multicarril, radar pedagógico o paso de peatones — perfil <code>gestor_concejo</code> en AG.</li>
     </ul>
   </section>
 
   <footer>
-    AGlabs · Radar IoT · planteamiento de integración del sensor uRAD Smart Radar Sensor · documento técnico interno · mayo 2026
+    AGlabs · Radar IoT · planteamiento de integración del uRAD Smart Traffic RPi · documento técnico interno · mayo 2026
   </footer>
 
 </div>

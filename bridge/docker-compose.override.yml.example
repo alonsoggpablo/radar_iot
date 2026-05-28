@@ -1,0 +1,24 @@
+# Compose override para pruebas SIN sensor real, usando datos sintéticos.
+#
+# Uso:
+#   cp docker-compose.override.yml.example docker-compose.override.yml
+#   # Editar abajo: RESULTS_DIR donde corra el generador sintético.
+#   # Luego, en otra terminal:
+#   mkdir -p /tmp/radar_results
+#   python3 ../scripts/generate_synthetic_results.py \
+#       --output /tmp/radar_results/Vehicle_results.txt --rate 6
+#   # Y arrancar el bridge en esta misma carpeta:
+#   docker compose up --build
+#
+# Docker Compose lee automáticamente cualquier fichero llamado docker-compose.override.yml
+# y lo merge-a sobre docker-compose.yml — sin tocar el original.
+
+services:
+  radar_iot_bridge:
+    volumes:
+      # Sobrescribe el bind-mount real (/home/pi/Desktop/uRAD_Tracking_v2_x/Results)
+      # por la carpeta sintética. El primer '!reset' anula el mapping anterior si tu
+      # Docker Compose >= v2.24; si es más antiguo, puedes simplemente redefinir el
+      # mismo path destino (/results) y Docker usa la última definición.
+      - /tmp/radar_results:/results:ro
+      - radar_iot_data:/var/lib/radar_iot
