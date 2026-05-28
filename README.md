@@ -141,7 +141,7 @@ docker compose up --build
 #   - .../$health retained cada 60 segundos
 ```
 
-**Credenciales MQTT para la prueba:** si todavía no hay usuario `radar_iot_001` en el ACL de `aglabs_mosquitto`, pídelo al agente `aglabs_mqtt` (`/root/aglabs_mqtt`) o arranca un Mosquitto local en la LAN apuntando ahí — el wrapper acepta cualquier host en `MQTT_HOST`.
+**Credenciales MQTT para la prueba:** usuario `radar_iot_001` ya provisionado en `aglabs_mosquitto` desde 2026-05-28, con ACL anclada al site (`aglabs/radar/concejo_oviedo_paso_independencia_3/radar_iot_001/#`). Pedir la password al agente `aglabs_mqtt` (`/root/aglabs_mqtt`) y meterla en `bridge/.env`. Si después rotas credenciales o tocas `.env`, **no uses `docker compose restart`** — no recarga el `env_file`. Usa `docker compose up -d --force-recreate radar_iot_bridge` (detalle en [`CLAUDE.md §Gotchas`](CLAUDE.md)).
 
 **Inspeccionar SQLite local en la Pi:**
 
@@ -154,7 +154,7 @@ docker exec -it radar_iot_bridge sqlite3 /var/lib/radar_iot/events.sqlite \
 
 ## Estado
 
-**Documentación + wrapper v0.1.0 listos, sin hardware todavía.** Próximos pasos detallados en [`CLAUDE.md §Estado actual`](CLAUDE.md).
+**Documentación + wrapper v0.1.0 listos, sin hardware todavía.** Pipeline edge→broker AGlabs verificado end-to-end el 2026-05-28 con datos sintéticos desde la Pi `nexus`: credencial `radar_iot_001` provisionada con ACL anclada al site, wrapper conectado a `wss://mqtt.aglabs.es:443/mqtt`, publicación estable de `track`/`event`/`$health`. Próximos pasos detallados en [`CLAUDE.md §Estado actual`](CLAUDE.md).
 
 ## Editar la página
 

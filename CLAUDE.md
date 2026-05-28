@@ -317,12 +317,20 @@ Pensada para validar todo el pipeline antes de comprar el Smart Traffic real. Pa
 
 ## Estado actual (a 2026-05-28)
 
-**Documentación + wrapper v0.1.0 + DDL + Telegraf + generador sintético, todo en repo (commit `Sonia 0.1`).** Sin hardware todavía. Pendiente:
+**Documentación + wrapper v0.1.0 + DDL + Telegraf + generador sintético, todo en repo (commit `Sonia 0.1`).** Sin hardware todavía, pero **pipeline edge → broker AGlabs verificado end-to-end con datos sintéticos** desde la Pi `nexus` (15:09 UTC). Pendiente:
 
 - Aplicar migración `nexus_radar` en Boreas (esperando al agente Boreas).
 - Extender `nexus_telegraf.conf` (esperando al agente Nexus).
-- Provisionar credencial `radar_iot_001` en `aglabs_mosquitto` (esperando al agente aglabs_mqtt).
+- ~~Provisionar credencial `radar_iot_001` en `aglabs_mosquitto`~~ — **hecho 2026-05-28**: usuario `radar_iot_001` provisionado con ACL `topic write aglabs/radar/concejo_oviedo_paso_independencia_3/radar_iot_001/#` (site anclado, sin wildcard `+`). Spoofing a otro `<site>` recibe PUBACK pero el broker dropea silenciosamente (verificado).
 - Adquirir Smart Traffic RPi + Teltonika RUT241 (esperando presupuesto Anteral).
+
+### Bring-up del 2026-05-28 (verificación end-to-end con datos sintéticos)
+
+Primera vez que el wrapper publica contra el broker AGlabs real con credencial productiva:
+
+- `bridge/.env` en `nexus` configurado con `RADAR_SITE=concejo_oviedo_paso_independencia_3`, `RADAR_SENSOR_ID=radar_iot_001`, `MQTT_USERNAME=radar_iot_001` y la pwd entregada por `aglabs_mqtt`. Generador sintético escribiendo a `/tmp/radar_results/Vehicle_results.txt` (override compose activo).
+- **Pitfall encontrado y documentado en §Gotchas:** un `docker compose restart` tras editar `.env` no cargó la pwd nueva (mantuvo la vieja de 185 chars vs. los 40 nuevos), broker devolvió `rc=Not authorized` durante ~32 min hasta que se forzó `docker compose up -d --force-recreate`.
+- Tras recrear: `MQTT connected to mqtt.aglabs.es:443`, cola SQLite drenando de 389 → 1 pendiente en ~12 s, publicación de `track` + `event` cada pocos segundos, `$health` retained activo. Conexión estable, sin reintentos. Esto confirma que la cadena `tail → SQLite WAL → paho MQTT WSS → mosquitto AGlabs` funciona con la ACL real.
 
 **Siguientes pasos** (revisados 2026-05-28):
 
@@ -345,6 +353,8 @@ Pensada para validar todo el pipeline antes de comprar el Smart Traffic real. Pa
 - **Temperatura recomendada -20 a +65 °C** (rango operativo declarado -20 a +80 °C). Hay un disipador interno + tapón de ventilación + ventilador PWM.
 - **Modo highway vs urbano cambia la clasificación.** Con `HIGHWAY_SCENARIO=True` el firmware no separa bicicletas ni peatones — los reporta como tipo 1. Mantener `False` para uso municipal estándar.
 - **Distancia máxima depende del modo.** 30 m para conteo, 100 m para detecciones en tiempo real (radar pedagógico, control de acceso). No mezclar expectativas.
+- **`docker compose restart` NO recarga `env_file`.** Mantiene los env vars del `up` original. Tras editar `bridge/.env` (p. ej. rotar la password MQTT) hay que usar `docker compose up -d --force-recreate radar_iot_bridge`, no `restart`. Confirmado el 2026-05-28: tras rotar `MQTT_PASSWORD` el contenedor seguía conectándose con la pwd vieja y el broker devolvía `rc=Not authorized` hasta forzar la recreación. Diagnóstico rápido: `docker exec radar_iot_bridge sh -c 'echo ${#MQTT_PASSWORD}'` — si la longitud no coincide con el `.env`, hay que recrear.
+- **`Not authorized` en CONNACK es autenticación, no ACL de topic.** Las ACL `topic write …` solo se aplican a mensajes posteriores al CONNECT. Si el wrapper loguea `MQTT connect failed rc=Not authorized`, el problema está en `MQTT_USERNAME`/`MQTT_PASSWORD`/`client_id`, no en los permisos de publicación. Para probar credenciales sin el wrapper: `docker exec radar_iot_bridge python3 -c "import paho.mqtt.client as m, ssl, threading; ev=threading.Event(); c=m.Client(client_id='radar_iot_001', callback_api_version=m.CallbackAPIVersion.VERSION2, transport='websockets'); c.ws_set_options(path='/mqtt'); c.tls_set(cert_reqs=ssl.CERT_REQUIRED); c.username_pw_set('radar_iot_001', '<pwd>'); c.on_connect=lambda *a,**k: (print('rc=', a[3]), ev.set()); c.connect_async('mqtt.aglabs.es', 443); c.loop_start(); ev.wait(10)"`.
 
 ---
 
