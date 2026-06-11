@@ -156,6 +156,14 @@ docker exec -it radar_iot_bridge sqlite3 /var/lib/radar_iot/events.sqlite \
 
 **Documentación + wrapper v0.1.0 listos, sin hardware todavía.** Próximos pasos detallados en [`CLAUDE.md §Estado actual`](CLAUDE.md).
 
+**2026-06-11 — primer Pi real (radar_iot_001, vía Atlas):** el wrapper se desplegó
+end-to-end en un Pi tras un RUT. Dos hallazgos (ver `CLAUDE.md §Formato de
+Vehicle_results.txt`): (1) el `timestamp` real de Anteral es `yyyy/mm/dd HH:MM:SS`
+(2 tokens) — `parse_line` ya lo soporta, validado inyectando líneas reales →
+`track`/`event` por MQTT; (2) **bloqueo de vendor**: el Tracking de Anteral
+crashea con numpy 2.x al procesar detecciones (v2.4 y v2.3), pendiente de un build
+compatible de Anteral — hasta entonces no fluyen detecciones reales.
+
 ## Editar la página
 
 ```bash

@@ -112,6 +112,27 @@ timestamp   velocity_kmh   x_distance_m   type
 ```
 `type ∈ {1: normal <8m, 2: medio 8–15m, 3: largo >15m, 4: bici/moto, 5: peatón <10km/h}`
 
+**GOTCHA (2026-06-11) — el `timestamp` de Anteral son DOS tokens.** El firmware
+real escribe el timestamp como `yyyy/mm/dd HH:MM:SS` (con `/` y un espacio en
+medio, hora **local** del Pi), así que una línea real tiene **5 tokens**
+separados por espacio, no 4. El primer `parse_line` del bridge asumía un
+timestamp de un solo token (epoch/ISO) → tiraba **toda** línea real con
+`unparseable line … Invalid isoformat string: '2026/06/11'`. Arreglado:
+`parse_line`/`parse_ts_token` aceptan ahora el formato Anteral (5 tokens,
+`yyyy/mm/dd HH:MM:SS`) además del legacy de 4 tokens (bench/sintético).
+Validado end-to-end inyectando líneas reales → `track`+`event` por MQTT.
+
+**Bloqueo de vendor pendiente (Anteral) — crash numpy 2.x.** En las RPi con
+Debian 13 / numpy 2.x el Tracking Software (v2.4 con Python 3.13 del sistema, y
+v2.3 en venv Python 3.11 — ambos con numpy 2.4.6) **crashea al procesar
+detecciones** en `distance_matrix` (`ValueError: setting an array element with a
+sequence` / `TypeError: only 0-dimensional arrays…`): numpy 2.x rechaza la
+construcción de arrays "ragged". Con la escena vacía no crashea (frames `[]`);
+revienta en cuanto hay objetos. El firmware del radar funciona ("Radar
+working"). **Hasta que Anteral entregue un build compatible con numpy 2.x (o
+para un Python donde se pueda fijar numpy<2), `Vehicle_results.txt` queda vacío
+y no fluyen detecciones reales** — el bridge ya está listo para cuando lleguen.
+
 ---
 
 ## Instalación — geometría (manual del fabricante)
@@ -313,15 +334,15 @@ Pensada para validar todo el pipeline antes de comprar el Smart Traffic real. Pa
 5. `docker compose up --build` — el bridge tail-ea el fichero sintético como si fuera real.
 6. Verificar en MQTTX (`wss://mqtt.aglabs.es/mqtt`) los topics `aglabs/radar/<site>/<sensor>/{track,event,state,$health}`.
 
-**Credencial MQTT de prueba:** si no existe `radar_iot_001` en el ACL de `aglabs_mosquitto`, pedir al agente `aglabs_mqtt` que la cree, o arrancar un Mosquitto local en la LAN apuntando ahí (el wrapper acepta cualquier `MQTT_HOST`).
+**Credencial MQTT de prueba:** `radar_iot_001` provisionada en `aglabs_mosquitto` desde 2026-05-28 (publish-only sobre `aglabs/radar/+/+/{track,event,state,$health}`). El password de v1 está guardado en la memoria del agente `aglabs_mqtt` (`mqtt_credentials.md`) y debe pegarse en `bridge/.env` del repo radar_iot — nunca commitear. Para registrar **el segundo sensor** (`radar_iot_002` etc.) la receta vive en [`/root/aglabs_mqtt/CLAUDE.md §"Usuarios MQTT (password_file + ACL)"`](../aglabs_mqtt/CLAUDE.md) — esencialmente: hash con `mosquitto_passwd`, copy/paste del bloque ACL de `radar_iot_001` cambiando el nombre, `docker restart aglabs_mosquitto`. Las ACL viven en `/root/aglabs_mqtt/mosquitto/config/aclfile` y los hashes en `/root/aglabs_mqtt/mosquitto/config/passwordfile` (ambos gitignored). El subscriber de Telegraf (`nexus_telegraf`) ya tiene `read` permitido sobre `aglabs/radar/#` — un sensor nuevo es invisible al broker hasta que se le da credencial+ACL, pero el momento que publique, Telegraf lo verá sin tocar nada.
 
 ## Estado actual (a 2026-05-28)
 
 **Documentación + wrapper v0.1.0 + DDL + Telegraf + generador sintético, todo en repo (commit `Sonia 0.1`).** Sin hardware todavía. Pendiente:
 
 - Aplicar migración `nexus_radar` en Boreas (esperando al agente Boreas).
-- Extender `nexus_telegraf.conf` (esperando al agente Nexus).
-- Provisionar credencial `radar_iot_001` en `aglabs_mosquitto` (esperando al agente aglabs_mqtt).
+- Extender `nexus_telegraf.conf` con `[[inputs.mqtt_consumer]]` apuntando a `tcp://aglabs_mosquitto:1883` (usuario `nexus_telegraf`, topics `aglabs/radar/#`) — esperando al agente Nexus. El usuario ya está provisionado en `aglabs_mosquitto`; password en memoria de Claude (`mqtt_credentials.md`).
+- ~~Provisionar credencial `radar_iot_001` en `aglabs_mosquitto`~~ — hecho 2026-05-28.
 - Adquirir Smart Traffic RPi + Teltonika RUT241 (esperando presupuesto Anteral).
 
 **Siguientes pasos** (revisados 2026-05-28):

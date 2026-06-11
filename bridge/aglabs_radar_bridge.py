@@ -83,14 +83,27 @@ def utcnow_iso() -> str:
 
 
 def parse_ts_token(token: str) -> str:
+    """Normaliza un timestamp a ISO-8601 UTC con ms.
+
+    Acepta tres formatos:
+      - epoch (float),
+      - ISO-8601 (con 'T' o espacio),
+      - Anteral uRAD: 'yyyy/mm/dd HH:MM:SS' (hora LOCAL del Pi, naive).
+    """
     try:
         return datetime.fromtimestamp(float(token), tz=timezone.utc).isoformat(
             timespec="milliseconds"
         ).replace("+00:00", "Z")
     except ValueError:
-        return datetime.fromisoformat(token.replace("Z", "+00:00")).astimezone(
-            timezone.utc
-        ).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        pass
+    try:
+        dt = datetime.fromisoformat(token.replace("Z", "+00:00"))
+    except ValueError:
+        # Formato Anteral: hora local del Pi sin tz -> astimezone la interpreta local.
+        dt = datetime.strptime(token, "%Y/%m/%d %H:%M:%S")
+    return dt.astimezone(timezone.utc).isoformat(
+        timespec="milliseconds"
+    ).replace("+00:00", "Z")
 
 
 def parse_line(line: str) -> dict | None:
@@ -98,20 +111,29 @@ def parse_line(line: str) -> dict | None:
 
     velocity is signed in km/h: positive = receding, negative = approaching.
     Returns None on parse failure (logged, never raises).
+
+    Soporta el formato real de Anteral 'yyyy/mm/dd HH:MM:SS <vel> <x> <type>'
+    (el timestamp ocupa DOS tokens, fecha y hora) además del formato legacy de
+    4 tokens con timestamp en uno solo (epoch/ISO, usado por el bench).
     """
     parts = line.strip().split()
     if len(parts) < 4:
         return None
+    # Anteral: fecha con '/' + hora con ':' -> el ts son los 2 primeros tokens.
+    if len(parts) >= 5 and "/" in parts[0] and ":" in parts[1]:
+        ts_token, rest = f"{parts[0]} {parts[1]}", parts[2:5]
+    else:
+        ts_token, rest = parts[0], parts[1:4]
     try:
-        ts = parse_ts_token(parts[0])
-        v_signed = float(parts[1])
-        x = float(parts[2])
-        t = int(parts[3])
+        ts = parse_ts_token(ts_token)
+        v_signed = float(rest[0])
+        x = float(rest[1])
+        t = int(rest[2])
     except (ValueError, IndexError) as e:
         logging.warning("unparseable line %r: %s", line, e)
         return None
 
-    fw_raw = " ".join(parts[:4])
+    fw_raw = f"{ts_token} {' '.join(rest)}"
     event_id = hashlib.sha256(
         f"{Config.sensor_id}|{fw_raw}".encode()
     ).hexdigest()[:32]
