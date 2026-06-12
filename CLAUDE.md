@@ -120,7 +120,19 @@ timestamp de un solo token (epoch/ISO) → tiraba **toda** línea real con
 `unparseable line … Invalid isoformat string: '2026/06/11'`. Arreglado:
 `parse_line`/`parse_ts_token` aceptan ahora el formato Anteral (5 tokens,
 `yyyy/mm/dd HH:MM:SS`) además del legacy de 4 tokens (bench/sintético).
-Validado end-to-end inyectando líneas reales → `track`+`event` por MQTT.
+
+**GOTCHA (2026-06-12) — el build real de Anteral rota por día y usa epoch+UUID.**
+Con el crash de numpy resuelto, el build v2.3 que entregó Anteral resultó escribir
+distinto a lo documentado: (a) **fichero con fecha** `Results/<YYYY-MM-DD>_Vehicle_results.txt`
+(no el plano `Vehicle_results.txt`), y (b) líneas con **timestamp epoch + un UUID
+de track al final**: `<epoch> <vel> <x> <type> <uuid>` (5 columnas). El parser ya
+lo cubre (epoch en `parse_ts_token`, el UUID sobra y se ignora; Atlas genera su
+propio `external_event_id`). Para la rotación diaria, `tail_loop` ahora **sigue el
+`*Vehicle_results.txt` más reciente** del dir y cambia de fichero (desde offset 0)
+al cambiar el día. **Validado end-to-end real**: detecciones del radar →
+`nexus_radar` en boreas_db (track + speed_violation). Las velocidades observadas
+(75–119 km/h, tipos vehículo-largo/moto en una oficina) parecen **ruido/eco** por
+colocación/apuntado del radar, no un problema del pipeline.
 
 **Bloqueo de vendor pendiente (Anteral) — crash numpy 2.x.** En las RPi con
 Debian 13 / numpy 2.x el Tracking Software (v2.4 con Python 3.13 del sistema, y

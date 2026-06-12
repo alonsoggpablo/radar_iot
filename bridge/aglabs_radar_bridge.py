@@ -345,26 +345,62 @@ class Bridge:
             logging.exception("health publish failed")
 
     # ---- tail thread ------------------------------------------------------
+    def _newest_results_file(self):
+        """El build de Anteral rota el fichero por día: escribe
+        ``<YYYY-MM-DD>_Vehicle_results.txt`` (y builds antiguos/bench el plano
+        ``Vehicle_results.txt``). Seguimos el más reciente que case con
+        ``*<basename>`` dentro del dir de Results; fallback al path configurado.
+        """
+        base = Config.results_path
+        try:
+            cands = sorted(
+                base.parent.glob(f"*{base.name}"),
+                key=lambda p: p.stat().st_mtime,
+            )
+        except OSError:
+            cands = []
+        if cands:
+            return cands[-1]
+        return base if base.exists() else None
+
     def tail_loop(self):
-        path = Config.results_path
-        last_inode = None
+        base_name = Config.results_path.name
+        cur_name = self.store.get_meta("tail_file", "")
         offset = int(self.store.get_meta("last_file_offset", "0"))
-        logging.info("tail starting on %s offset=%d", path, offset)
+        last_inode = None
         f = None
+        logging.info(
+            "tail starting (following newest *%s, resume file=%r offset=%d)",
+            base_name, cur_name, offset,
+        )
         while not self.stop_evt.is_set():
             try:
-                if not path.exists():
+                target = self._newest_results_file()
+                if target is None:
                     time.sleep(1)
                     continue
-                st = path.stat()
-                if last_inode is None or st.st_ino != last_inode or offset > st.st_size:
+                st = target.stat()
+                # Re-abrir si: primer arranque, cambió el fichero (rollover de
+                # día), cambió el inode (rotación in-place) o truncado.
+                need_open = (
+                    f is None
+                    or target.name != cur_name
+                    or st.st_ino != last_inode
+                    or offset > st.st_size
+                )
+                if need_open:
+                    if target.name != cur_name:
+                        logging.info("tail switching to %s", target.name)
+                        cur_name = target.name
+                        offset = 0
+                        self.store.set_meta("tail_file", cur_name)
+                    elif offset > st.st_size:
+                        logging.warning("file truncated, restarting from 0")
+                        offset = 0
                     if f:
                         f.close()
-                    f = open(path, "r")
+                    f = open(target, "r")
                     last_inode = st.st_ino
-                    if offset > st.st_size:
-                        logging.warning("file truncated/rotated, restarting from 0")
-                        offset = 0
                     f.seek(offset)
                 line = f.readline()
                 if not line:
