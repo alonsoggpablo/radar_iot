@@ -1,0 +1,21 @@
+[package]
+name = "radar_tracker_rs"
+version = "0.1.0"
+edition = "2021"
+description = "Tracker propio de nube de puntos para uRAD Industrial — sustituto de do_tracking (Anteral)"
+license = "MIT"
+
+[[bin]]
+name = "radar_tracker"
+path = "src/main.rs"
+
+[dependencies]
+# Esqueleto std-only a propósito: compila sin red. Añadir cuando toque cada fase:
+# clap       = { version = "4", features = ["derive"] }  # CLI robusta
+# serialport = "4"                                        # ingesta serie en vivo (fase serve)
+# rumqttc    = "0.24"                                     # publicar tracks directo a MQTT
+# nalgebra   = "0.33"                                     # filtro Kalman (sustituir alpha-beta)
+
+[profile.release]
+lto = true
+opt-level = 3
