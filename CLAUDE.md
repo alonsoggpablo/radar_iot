@@ -130,9 +130,23 @@ lo cubre (epoch en `parse_ts_token`, el UUID sobra y se ignora; Atlas genera su
 propio `external_event_id`). Para la rotación diaria, `tail_loop` ahora **sigue el
 `*Vehicle_results.txt` más reciente** del dir y cambia de fichero (desde offset 0)
 al cambiar el día. **Validado end-to-end real**: detecciones del radar →
-`nexus_radar` en boreas_db (track + speed_violation). Las velocidades observadas
-(75–119 km/h, tipos vehículo-largo/moto en una oficina) parecen **ruido/eco** por
-colocación/apuntado del radar, no un problema del pipeline.
+`nexus_radar` en boreas_db (track + speed_violation).
+
+**GOTCHA OPERACIONAL — las "detecciones" en banco/oficina son ARTEFACTOS, no
+tráfico.** El Tracking de Anteral es un contador de vehículos: fuerza **todo**
+cluster que rastrea a un tipo (1-5) + velocidad; no sabe que no hay calzada. Por
+eso, colocado en una oficina, emite `track`s igualmente. Hay que distinguir:
+- Detecciones lentas (~3 km/h, tipo 5 peatón) ≈ una **persona** pasando — reales.
+- Detecciones rápidas (75–119 km/h, tipos vehículo-largo/moto, a ~1,7 m,
+  acercándose) = **ruido/multipath/eco** en sala cerrada (reflexiones en paredes,
+  mobiliario, cristales), amplificado si corre la variante **highway**.
+  Físicamente imposibles (ningún camión a 1,7 m a 119 km/h) → targets fantasma.
+El 60 GHz se atenúa en paredes/cristal, así que **no** ve coches de la calle por
+una ventana. **Los datos solo son significativos con el radar apuntando a una vía
+real** según la geometría del manual de Anteral (altura ≥3 m, inclinación por
+tabla, tramo recto 0–25 m, `yaw` por nº de carriles, `HIGHWAY_SCENARIO=false`
+para uso urbano). Hasta entonces, `nexus_radar` recibe ruido — útil solo para
+validar el pipeline, no para conclusiones de tráfico.
 
 **Bloqueo de vendor pendiente (Anteral) — crash numpy 2.x.** En las RPi con
 Debian 13 / numpy 2.x el Tracking Software (v2.4 con Python 3.13 del sistema, y

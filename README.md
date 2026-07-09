@@ -164,6 +164,14 @@ Vehicle_results.txt`): (1) el `timestamp` real de Anteral es `yyyy/mm/dd HH:MM:S
 crashea con numpy 2.x al procesar detecciones (v2.4 y v2.3), pendiente de un build
 compatible de Anteral — hasta entonces no fluyen detecciones reales.
 
+**2026-06-12 — cadena completa viva.** Con el crash resuelto, las detecciones
+fluyen end-to-end: radar → `<fecha>_Vehicle_results.txt` → bridge → MQTT →
+telegraf Nexus → hypertable `nexus_radar` (boreas_db). **Aviso:** con el radar en
+una oficina, las "detecciones" son **artefactos** (ruido/multipath; el tracker
+fuerza todo cluster a un tipo de vehículo). Los datos solo son fiables con el
+radar montado apuntando a una vía real (ver `CLAUDE.md`). Falta la vista
+"Tráfico" en Boreas (visualización) — hand-off al agente de Boreas.
+
 ## Editar la página
 
 ```bash
