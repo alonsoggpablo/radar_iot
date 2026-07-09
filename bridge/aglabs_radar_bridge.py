@@ -284,7 +284,14 @@ class Bridge:
             client_id=Config.sensor_id,
             callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
             transport=Config.mqtt_transport,
-            clean_session=False,
+            # clean_session=True a propósito: la fiabilidad la da nuestro store
+            # local (events.sqlite con reintento), NO la sesión persistente del
+            # broker. Con clean_session=False el broker acumulaba mensajes QoS1
+            # a topics ya denegados (p.ej. de un site anterior mal-ACLeado) y los
+            # reintentaba en cada reconexión → 'disconnected: not authorised' en
+            # bucle y el dato nuevo nunca salía. clean_session=True evita esa
+            # clase de fallo y el churn de 'session taken over'. (2026-07-09)
+            clean_session=True,
         )
         if Config.mqtt_transport == "websockets":
             c.ws_set_options(path=Config.mqtt_path)
